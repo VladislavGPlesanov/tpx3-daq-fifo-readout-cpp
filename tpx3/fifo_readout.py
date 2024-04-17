@@ -20,6 +20,10 @@ loglevel = logging.getLogger('RD53A').getEffectiveLevel()
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
 
+###############################
+def scream(text):
+    print(text,flush=True)
+###############################
 
 class RxSyncError(Exception):
     pass
