@@ -622,7 +622,7 @@ class ScanBase(object):
         self.load_mask_matrix(**kwargs)
         self.load_thr_matrix(**kwargs)
 
-    def start(self, readout_interval = 0.005, moving_average_time_period = 10, iteration = None, status = None, **kwargs):
+    def start(self, readout_interval = 0.005, moving_average_time_period = 10, iteration = None, status = None, ena_cpp = False, **kwargs):
         '''
             Prepares the scan and starts the actual test routine
         '''
@@ -633,10 +633,13 @@ class ScanBase(object):
         self._first_read = False
         self.scan_param_id = 0
 
+        print("[DEBUG] scan_base::start: ena_cpp={}, readout_interval={}".format(ena_cpp, readout_interval))
         # Initialize the communication with the chip and read the board name and firmware version
-        self.fifo_readout = FifoReadout(chip = self.chip, readout_interval = readout_interval, moving_average_time_period = moving_average_time_period)
+        self.fifo_readout = FifoReadout(chip = self.chip, readout_interval = readout_interval, moving_average_time_period = moving_average_time_period, ena_cpp = ena_cpp)
         self.board_name = self.chip.board_version
         self.firmware_version = self.chip.fw_version
+        print("[DEBUG] scan_base::start: after start - ena_cpp={}, readout_interval={}".format(ena_cpp,readout_interval))
+        # Initialize the communication with the chip and read the board name and firmware version
 
         # Chip start-up sequence
         # Reset the chip

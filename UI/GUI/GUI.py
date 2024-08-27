@@ -20,7 +20,6 @@ from UI.GUI.converter import utils as conv_utils
 from UI.GUI.converter.converter_manager import ConverterManager
 from UI.GUI.sim_producer.producer_sim_manager import ProducerSimManager
 
-
 class GUI_Plot1(Gtk.Window):
     def __init__(self, data_queue, startet_from = 'GUI', plottype = None, integration_length = None, color_depth = None, colorsteps = None):
         self.active = 'False'
@@ -64,6 +63,7 @@ class GUI_Plot1(Gtk.Window):
 
             if TPX3_datalogger.read_value('plottype') == 'normal':
                 self.plotwidget.change_colormap(colormap = self.plotwidget.fading_colormap(TPX3_datalogger.read_value('colorsteps')))
+                print("data Queue size = {}".format(data_queue.qsize()), flush=True)
                 self.Tag = GLib.idle_add(self.plotwidget.update_plot)
             elif TPX3_datalogger.read_value('plottype') == 'occupancy':
                 self.plotwidget.change_colormap(colormap = cm.viridis, vmax = TPX3_datalogger.read_value('color_depth'))
@@ -181,9 +181,9 @@ class GUI_Plot_settings(Gtk.Window):
 
         self.show_all()
 
-        if self.plotwidget.get_plottype() == 'normal':
-            color_depth_label.hide()
-            self.color_depth.hide()
+        #if self.plotwidget.get_plottype() == 'normal':
+        #    color_depth_label.hide()
+        #    self.color_depth.hide()
 
         self.resize(1, 1)
 
@@ -829,7 +829,7 @@ class GUI_Noise_Scan(Gtk.Window):
         self.other_process.set_text('')
 
         #Threshold_start
-        self.Threshold_start_value = 1400
+        self.Threshold_start_value = 1050
         Threshold_start_adj = Gtk.Adjustment()
         Threshold_start_adj.configure(1400, 0, 2911, 1, 0, 0)
         self.Threshold_start = Gtk.SpinButton(adjustment = Threshold_start_adj, climb_rate = 1, digits = 0)
@@ -839,7 +839,7 @@ class GUI_Noise_Scan(Gtk.Window):
         Threshold_start_label.set_text('Start ')
 
         #Threshold_stop
-        self.Threshold_stop_value = 2900
+        self.Threshold_stop_value = 1051
         Threshold_stop_adj = Gtk.Adjustment()
         Threshold_stop_adj.configure(2900, 0, 2911, 1, 0, 0)
         self.Threshold_stop = Gtk.SpinButton(adjustment = Threshold_stop_adj, climb_rate = 1, digits = 0)
@@ -849,17 +849,29 @@ class GUI_Noise_Scan(Gtk.Window):
         Threshold_stop_label.set_text('Stop ')
 
         #Shutter
+         
+        self.shutter_time = float(TPX3_datalogger.read_value('shutter_time'))   
         self.shutter_entry = Gtk.Entry()
-        self.shutter_entry.set_text('0.01')
-        self.shutter_entry.connect('activate', self.shutter_entry_text, 'h')
+        self.shutter_entry.set_text(str(self.shutter_time))
+        #self.shutter_entry.set_text('0.01')
+        #self.shutter_entry.connect('activate', self.shutter_entry_text, 'h')
+        self.shutter_entry.connect('activate', self.shutter_time_entered)
         self.shutter_entry.set_width_chars(8)
         shutter_label = Gtk.Label()
         shutter_label.set_text('Shutter time [seconds]')
-        self.shutter_time = 0.01
+        #TPX3_datalogger.write_value(name = 'shutter_time', value = self.shutter_time)       
+        #self.shutter_time = 0.01
 
         #Startbutton
         self.Startbutton = Gtk.Button(label = 'Start')
         self.Startbutton.connect('clicked', self.on_Startbutton_clicked)
+
+        #grid.attach() has
+        # 0 - child
+        # 1 - column to which buton snaps on its left side
+        # 2 - row to which button snaps to on its top let corner
+        # 3 - width in (n x columns)
+        # 4 - height in (n x rows)
 
         grid.attach(Threshold_label, 0, 0, 6, 1)
         grid.attach(Threshold_start_label, 0, 1, 1, 1)
@@ -869,8 +881,14 @@ class GUI_Noise_Scan(Gtk.Window):
         grid.attach(shutter_label, 0, 2, 6, 1)
         grid.attach(self.shutter_entry, 2, 3, 2, 1)
         grid.attach(Space, 0, 4, 1, 1)
-        grid.attach(self.other_process, 0, 5, 4, 1)
+        grid.attach(self.other_process, 0, 5, 4, 1) # original
         grid.attach(self.Startbutton, 4, 5, 2, 1)
+
+        # adding cpp button inplace of "other process" space
+
+#        grid.attach(self.cpp_checkbox, 1, 5, 2, 1)
+#        grid.attach_next_to(self.other_process, self.cpp_checkbox, Gtk.PositionType.RIGHT,2,1)
+#        grid.attach(self.Startbutton, 4, 5, 2, 1)
 
         self.show_all()
 
@@ -898,12 +916,18 @@ class GUI_Noise_Scan(Gtk.Window):
         non_float_input = False
         try:
             self.shutter_time = float(self.shutter_entry.get_text())
-            self.shutter_entry.set_text(str(self.shutter_time))
+            self.shutter_entry.set_text(str(self.shutter_entry))
         except ValueError:
             self.shutter_entry.set_text('')
             non_float_input = True
         if non_float_input == True:
             return
+
+    def shutter_time_entered(self, widget):
+        try:
+            self.shutter_time=float(self.shutter_entry.get_text())
+        except:
+            self.shutter_time.set_text(self.shutter_entry)
 
     def on_Startbutton_clicked(self, widget):
         if GUI.get_process_alive():
@@ -912,14 +936,25 @@ class GUI_Noise_Scan(Gtk.Window):
         elif GUI.get_simulation_alive():
             self.other_process.set_text('Simulation running')
             return
+
+        try:
+            self.shutter_time=float(self.shutter_entry.get_text())
+            TPX3_datalogger.write_value(name = 'shutter_time', value = self.shutter_time)
+        except:
+            self.shutter_time.set_text(self.shutter_entry)
+
+
         GUI.Status_window_call(function = 'NoiseScan',
                                 lowerTHL = self.Threshold_start_value,
                                 upperTHL = self.Threshold_stop_value,
                                 shutter = self.shutter_time)
+
+        print("on_Startbutton_clicked: shutter={}".format(self.shutter_time))
         new_process = TPX3_multiprocess_start.process_call(function = 'NoiseScan',
                                                             Vthreshold_start = self.Threshold_start_value,
                                                             Vthreshold_stop = self.Threshold_stop_value,
                                                             shutter = self.shutter_time,
+                                                            ena_cpp = TPX3_datalogger.read_value(name = 'ena_cpp'), # my shit..
                                                             thrfile = TPX3_datalogger.read_value(name = 'Equalisation_path'),
                                                             maskfile = TPX3_datalogger.read_value(name = 'Mask_path'),
                                                             progress = GUI.get_progress_value_queue(),
@@ -929,6 +964,16 @@ class GUI_Noise_Scan(Gtk.Window):
         GUI.set_quit_scan_label()
 
         self.destroy()
+
+    # adding cpp activation for test
+    def on_enable_cpp_clicked(self,button):
+        if(button.get_active()):
+            self.enable_cpp = True
+            print("[DEBUG]UI::GUI::GUI.py: Enabling CPP readout")
+        else:
+            self.enable_cpp = False
+            print("[DEBUG]UI::GUI::GUI.py: Enabling PY readout")
+            
 
     def window_destroy(self, widget, event):
         self.destroy()
@@ -1194,6 +1239,8 @@ class GUI_Run_Datataking(Gtk.Window):
                                                             progress = GUI.get_progress_value_queue(),
                                                             status = GUI.get_status_queue(),
                                                             plot_queue = GUI.plot_queue,
+                                                            #ena_cpp = enable_cpp, # my shit..
+                                                            ena_cpp = TPX3_datalogger.read_value(name = 'ena_cpp'), # my shit..
                                                             readout_interval = TPX3_datalogger.read_value(name = 'Readout_Speed'))
         GUI.set_running_process(running_process = new_process)
         GUI.set_quit_scan_label()
@@ -1217,25 +1264,25 @@ class GUI_SetDAC(Gtk.Window):
         Space = Gtk.Label()
         Space.set_text("")
 
-        self.dac_dict = {'Ibias_Preamp_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
+        self.dac_dict = {'Ibias_Preamp_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
                          'Ibias_Preamp_OFF':    {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False},
                          'VPreamp_NCAS':        {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
                          'Ibias_Ikrum':         {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
                          'Vfbk':                {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Vthreshold_fine':     {"value" : 0, "default": 255, "size" : 511, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Vthreshold_coarse':   {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": True },
+                         'Vthreshold_fine':     {"value" : 0, "default": 255, "size" : 511, "adjust": None, "spinButton": None, "label": None, "show": False },# def - True
+                         'Vthreshold_coarse':   {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False },# def - True 
                          'Vthreshold_combined': {"value" : 0, "default": 1375,"size" : 1911,"adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Ibias_DiscS1_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
+                         'Ibias_DiscS1_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
                          'Ibias_DiscS1_OFF':    {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False},
-                         'Ibias_DiscS2_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
+                         'Ibias_DiscS2_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
                          'Ibias_DiscS2_OFF':    {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False},
                          'Ibias_PixelDAC':      {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Ibias_TPbufferIn':    {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Ibias_TPbufferOut':   {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
+                         'Ibias_TPbufferIn':    {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
+                         'Ibias_TPbufferOut':   {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
                          'VTP_coarse':          {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
                          'VTP_fine':            {"value" : 0, "default": 255, "size" : 511, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Ibias_CP_PLL':        {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'PLL_Vcntrl':          {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }}
+                         'Ibias_CP_PLL':        {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
+                         'PLL_Vcntrl':          {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }} # hide
 
         for dac in self.dac_dict:
             if self.dac_dict[dac]['show']:
@@ -1397,6 +1444,26 @@ class GUI_Additional_Settings(Gtk.Window):
         Readout_Speed_entry_label = Gtk.Label()
         Readout_Speed_entry_label.set_text('Readout Speed')
 
+        # addding cpp enable in settings
+        #
+        self.enable_cpp = TPX3_datalogger.read_value(name = 'ena_cpp')
+        #self.enable_cpp = False
+        #enable_cpp = False
+    
+        cpp_switch_label = Gtk.Label()
+        cpp_switch_label.set_text('Enable C++')
+        self.cpp_switch = Gtk.Switch()
+        self.cpp_switch.connect("notify::active", self.on_cpp_switch_activated)
+        self.cpp_switch.set_valign(Gtk.Align.CENTER)
+        self.cpp_switch.set_halign(Gtk.Align.CENTER)
+        if self.enable_cpp == True:
+            self.cpp_switch.set_active(True)
+        else:
+            self.cpp_switch.set_active(False)
+
+        #self.cpp_switch.set_margin(20)
+        #self.cpp_switch.set_active(False)
+
         #Expert check box
         self.expert_checkbox = Gtk.CheckButton(label='Expert')
         self.expert_checkbox.connect('toggled', self.on_expert_toggled)
@@ -1500,16 +1567,20 @@ class GUI_Additional_Settings(Gtk.Window):
         grid.attach(self.TP_Period, 2, 5, 2, 1)
         grid.attach(Readout_Speed_entry_label, 0, 6, 2, 1)
         grid.attach(self.Readout_Speed_entry, 2, 6, 3, 1)
-        grid.attach(Space, 0, 7, 3, 1)
-        grid.attach(self.TP_Ext_Int_button_label, 0, 8, 2, 1)
-        grid.attach(self.TP_Ext_Int_button, 2, 8, 2, 1)
-        grid.attach(self.AckCommand_en_button_label, 0, 9, 2, 1)
-        grid.attach(self.AckCommand_en_button, 2, 9, 2, 1)
-        grid.attach(self.ClkOut_frequency_combo_label, 0, 10, 2, 1)
-        grid.attach(self.ClkOut_frequency_combo, 2, 10, 3, 1)
-        grid.attach(self.dropdown_label, 0, 11, 2, 1)
-        grid.attach(self.dropdown, 2, 11, 3, 1)
-        grid.attach(self.Space2, 0, 12, 3, 1)
+        # squeezing in cpp enabling
+        grid.attach(cpp_switch_label, 0, 7, 2, 1)
+        grid.attach(self.cpp_switch, 2, 7, 2, 1)
+        # column index from this point should be +1 (if i delete upper two -1)
+        grid.attach(Space, 0, 8, 3, 1)
+        grid.attach(self.TP_Ext_Int_button_label, 0, 9, 2, 1)
+        grid.attach(self.TP_Ext_Int_button, 2, 9, 2, 1)
+        grid.attach(self.AckCommand_en_button_label, 0, 10, 2, 1)
+        grid.attach(self.AckCommand_en_button, 2, 10, 2, 1)
+        grid.attach(self.ClkOut_frequency_combo_label, 0, 11, 2, 1)
+        grid.attach(self.ClkOut_frequency_combo, 2, 11, 3, 1)
+        grid.attach(self.dropdown_label, 0, 12, 2, 1)
+        grid.attach(self.dropdown, 2, 12, 3, 1)
+        grid.attach(self.Space2, 0, 13, 3, 1)
         grid.attach(self.Link_label, 0, 13, 7, 1)
         for link_number in range(self.hardware_links):
             grid.attach(self.link_label[link_number], link_number % 8, 14 + (2 * (link_number // 8)), 1, 1)
@@ -1518,6 +1589,7 @@ class GUI_Additional_Settings(Gtk.Window):
         grid.attach(self.Savebutton, 8, 17 + 2 * ((self.hardware_links - 1) // 8), 1, 1)
 
         self.show_all()
+
         self.TP_Ext_Int_button_label.hide()
         self.TP_Ext_Int_button.hide()
         self.AckCommand_en_button_label.hide()
@@ -1535,6 +1607,23 @@ class GUI_Additional_Settings(Gtk.Window):
 
     def TP_Period_set(self, event):
         self.TP_Period_value = self.TP_Period.get_value_as_int()
+
+    # tryna' include py-to-cpp readout switch in "settings"
+    def on_cpp_switch_activated(self, switch, gparam):
+
+        state = self.cpp_switch.get_active()
+        if(state == True):
+            self.enable_cpp = True
+            TPX3_datalogger.write_value(name = 'ena_cpp', value = self.enable_cpp)
+            print("enablin' cpp readout - {}".format(self.enable_cpp))
+            #self.enable_cpp = True
+
+        else:
+            self.enable_cpp = False
+            TPX3_datalogger.write_value(name = 'ena_cpp', value = self.enable_cpp)
+            print("disablin' cpp readout - {}".format(self.enable_cpp))
+            #self.enable_cpp = False
+
 
     def on_expert_toggled(self, button):
         self.expert_value = button.get_active()
@@ -1670,6 +1759,9 @@ class GUI_Additional_Settings(Gtk.Window):
         TPX3_datalogger.write_to_yaml(name = 'Sense_DAC')
         TPX3_datalogger.write_value(name = 'Readout_Speed', value = self.Readout_Speed_value)
         TPX3_datalogger.write_value(name = 'TP_Period', value = self.TP_Period_value)
+        # my crap
+        #TPX3_datalogger.write_value(name = 'ena_cpp', value = enable_cpp)
+            
         for link_number in range(self.hardware_links):
             TPX3_datalogger.change_link_status(link_number, self.link_enable[link_number])
 
@@ -2730,6 +2822,25 @@ class GUI_Plot_Box(Gtk.Window):
     def window_destroy(self, widget, event = True):
         self.destroy()
 
+class ConfirmationDialog(Gtk.Dialog):
+    def __init__(self,parent, question):
+        super().__init__(title='QuestionBox', transient_for=parent, flags=0)
+        self.add_buttons(Gtk.STOCK_CANCEL,
+                         Gtk.ResponseType.CANCEL,
+                         Gtk.STOCK_OK,
+                         Gtk.ResponseType.OK)
+        self.set_default_size(150,150)
+        box = self.get_content_area()
+        box.add(question)
+        self.show_all()
+
+class ConfirmationWindow(Gtk.Window):
+    def __init__(self, windowname):
+        Gtk.Window.__init__(self,title=windowname)
+        self.set_border_width(6)
+        button
+
+
 class GUI_Main(Gtk.Window):
     def __init__(self):
         self.open = False
@@ -3014,28 +3125,38 @@ class GUI_Main(Gtk.Window):
         self.set_running_process(running_process = new_process)
         self.set_quit_scan_label()
         self.hardware_scan_idle = GLib.timeout_add(250, self.update_status)
-
+    
     def on_Resetbutton_clicked(self, widget):
-        if not self.get_process_alive():
-            TPX3_datalogger.set_data(config = TPX3_datalogger.default_config())
-            TPX3_datalogger.write_backup_to_yaml()
-            self.progressbar.hide()
-            self.statuslabel.set_text('')
-            self.statuslabel2.set_text('')
-            self.statuslabel3.set_text('')
-            self.statuslabel4.set_text('')
-            self.statuslabel5.set_text('')
-            self.statuslabel6.set_text('')
-            self.statuslabel7.set_text('')
-            self.statusstring4 = ''
-            self.statusstring3 = ''
-            self.statusstring2 = ''
-            self.statusstring1 = ''
-            self.progressbar.set_fraction(0.0)
-            self.resize(1,1)
-            self.write_statusbar('Default setting initialised')
+        self.write_statusbar('About to reset everything...')
+        question = Gtk.Label(label='You are about to reset all settings.\n\t Are you sure?')
+        dialog = ConfirmationDialog(self, question)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            if not self.get_process_alive():
+                TPX3_datalogger.set_data(config = TPX3_datalogger.default_config())
+                TPX3_datalogger.write_backup_to_yaml()
+                self.progressbar.hide()
+                self.statuslabel.set_text('')
+                self.statuslabel2.set_text('')
+                self.statuslabel3.set_text('')
+                self.statuslabel4.set_text('')
+                self.statuslabel5.set_text('')
+                self.statuslabel6.set_text('')
+                self.statuslabel7.set_text('')
+                self.statusstring4 = ''
+                self.statusstring3 = ''
+                self.statusstring2 = ''
+                self.statusstring1 = ''
+                self.progressbar.set_fraction(0.0)
+                self.resize(1,1)
+                self.write_statusbar('Default setting initialised')
+            else:
+                subw = GUI_Main_Error(title = 'Error', text = 'Process is running on the chip!')
+        elif response == Gtk.ResponseType.CANCEL:
+            self.write_statusbar('Reset canceled')
         else:
-            subw = GUI_Main_Error(title = 'Error', text = 'Process is running on the chip!')
+            self.write_statusbar('Default setting initialised')
+        dialog.destroy()
 
     def on_SetDACbutton_clicked(self, widget):
         subw = GUI_SetDAC()

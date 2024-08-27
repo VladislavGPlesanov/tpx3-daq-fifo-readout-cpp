@@ -16,6 +16,35 @@ from threading import Thread, Event
 from collections import deque
 from six.moves.queue import Queue, Empty
 
+#from tpx3.utils import text_color, text_color_bgr, dumpArraySpecs
+import os
+import ctypes
+import array as arr
+import basil
+
+# importing cpp readout library 
+clib = ctypes.CDLL('tpx3/cpp/tpx3readoutcpp.so')
+
+#getFifoData = clib.getFifoData
+#getFifoData.restype = ctypes.py_object
+#getFifoData.argtypes = [ctypes.py_object,
+#                           ctypes.c_float]
+#dequeData = clib.dequeDataOut
+#dequeData.restype = ctypes.py_object # result as tuple
+#dequeData.argtypes = [ctypes.py_object, # self 
+#                      ctypes.c_float]   # interval_ms
+#
+
+###############################################################
+#  whole readout function imitation in c++: 
+readoutToDeque = clib.readoutToDeque
+readoutToDeque.restype = ctypes.py_object
+readoutToDeque.argtypes = [ctypes.py_object, # class object self 
+                           ctypes.py_object, # _data_deque
+                           ctypes.c_float]   # interval in ms
+
+###################################################################
+
 loglevel = logging.getLogger('RD53A').getEffectiveLevel()
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
@@ -47,7 +76,7 @@ class StopTimeout(Exception):
 
 class FifoReadout(object):
 
-    def __init__(self, chip, readout_interval, moving_average_time_period):
+    def __init__(self, chip, readout_interval, moving_average_time_period, ena_cpp):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(loglevel)
 
@@ -73,6 +102,8 @@ class FifoReadout(object):
         self.reset_rx()
         self.reset_sram_fifo()
         self._record_count = 0
+        self.ena_cpp = ena_cpp
+        print("[DEBUG] fifo_readout::__init__: self.ena_cpp = {}".format(self.ena_cpp))
 
     @property
     def is_running(self):
@@ -104,6 +135,7 @@ class FifoReadout(object):
         return result / float(self._moving_average_time_period)
 
     def start(self, callback=None, errback=None, reset_rx=False, reset_sram_fifo=False, reset_errors=True, clear_buffer=False, fill_buffer=False, no_data_timeout=None):
+        print("OLOLO, starting fifo readout")
         if self._is_running:
             raise RuntimeError('Readout already running: use stop() before start()')
 
@@ -112,7 +144,7 @@ class FifoReadout(object):
         self.callback = callback
         self.errback = errback
         self.fill_buffer = fill_buffer
-        # self._record_count = 0
+
         if reset_rx:
             self.reset_rx()
         if reset_sram_fifo:
@@ -137,9 +169,17 @@ class FifoReadout(object):
             self.worker_thread = Thread(target=self.worker, name='WorkerThread')
             self.worker_thread.daemon = True
             self.worker_thread.start()
-        self.readout_thread = Thread(target=self.readout, name='ReadoutThread', kwargs={'no_data_timeout': no_data_timeout})
-        self.readout_thread.daemon = True
-        self.readout_thread.start()
+        # if flag set - using cpp readout else use legacy python routine
+        if self.ena_cpp:
+            print("tpx3::fifo_readout::start: USING [CPP] readout")
+            self.readout_thread = Thread(target=self.cpp_readout, name='CppReadoutThread', kwargs={'no_data_timeout': no_data_timeout})       
+            self.readout_thread.daemon = True
+            self.readout_thread.start()
+        else:
+            print("tpx3::fifo_readout::start: USING [PY] readout")
+            self.readout_thread = Thread(target=self.readout, name='ReadoutThread', kwargs={'no_data_timeout': no_data_timeout})
+            self.readout_thread.daemon = True
+            self.readout_thread.start()
 
     def stop(self, timeout=10.0):
         if not self._is_running:
@@ -194,10 +234,26 @@ class FifoReadout(object):
         self.logger.info('RX FIFO discard counter:     %s', " | ".join([repr(count).rjust(3) for count in discard_count]))
         self.logger.info('RX decode errors:            %s', " | ".join([repr(count).rjust(3) for count in decode_error_count]))
 
+#
+#    alternative readout function in c++
+#
+    def cpp_readout(self, no_data_timeout=None):
+        print("[TEST] using [CPP] readout")
+        self.logger.debug('Starting %s', self.readout_thread.name)
+        interval_ms = round(self.readout_interval*1000)
+        result = readoutToDeque(self, 
+                                self._data_deque,
+                                interval_ms)
+        self.logger.debug("Stopped %s", self.readout_thread.name) 
+
+#
+#    Legacy readout function
+#
     def readout(self, no_data_timeout=None):
         '''
             Readout thread continuously reading FIFO. Uses read_data() and appends data to self._data_deque (collection.deque).
         '''
+        print("[TEST] using [PY] readout")
         self.logger.debug('Starting %s', self.readout_thread.name)
         curr_time = self.get_float_time()
         time_wait = 0.0
@@ -361,6 +417,12 @@ class FifoReadout(object):
             return [self.chip[channel].DECODER_ERROR_COUNTER for channel in channels]
         else:
             return [channel.DECODER_ERROR_COUNTER for channel in self.chip.get_modules('tpx3_rx')]
+
+    def get_rx_fifo_size(self, channels=None):
+        if channels:
+            return [self.chip[channel].FIFO_SIZE for channel in channels]
+        else:
+            return [channel.FIFO_SIZE for channel in self.chip.get_modules('tpx3_rx')]
 
     def get_float_time(self):
         '''

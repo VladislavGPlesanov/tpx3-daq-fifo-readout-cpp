@@ -80,6 +80,12 @@ class plotwidget(object):
         return x, y, t
 
     def update_plot(self):
+        # some temp checks 
+    
+        print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
+        print("UPD plot: arrays {},{},{} ".format(self.x_vals.shape, self.y_vals.shape, self.t_vals.shape),flush=True)
+        #print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
+
         #Plot the fading plot with new data.
         new_xvals, new_yvals, new_tvals = self.get_new_vals()
         self.x_vals = np.append(self.x_vals, new_xvals)

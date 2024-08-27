@@ -62,7 +62,7 @@ class mask_logger(object):
         elif mask_element[0] == 'pixel':
             mask_matrix[int(mask_element[1]), int(mask_element[2])] = 1
         else:
-            print('Error: Unknown mask element')
+            print('tpx3_logger::write_mask: Error: Unknown mask element {}, must be one of following:(\'all\', \'row\', \'column\', \'pixel\')'.format(mask_element[0]))
 
         #Saving the final matrix
         with tb.open_file(path, 'a') as out_file:
@@ -77,7 +77,7 @@ class mask_logger(object):
         if mask == None:
             path = TPX3_datalogger.read_value(name = 'Mask_path')
             if path == None:
-                print('Error: No mask to work with!')
+                print('tpx3_logger::delete_mask: Error: data logger has no path to mask file!')
         else:
             user_path = os.path.expanduser('~')
             user_path = os.path.join(user_path, 'Timepix3')
@@ -192,7 +192,7 @@ class file_logger(object):
             Chip = Chipnames[0]
         else:
             Chip = 'Multi_chip'
-            print('not implemented')
+            print('tpx3_logger::create_file: multichip readout not implemented')
 
         if filename == None:
             filename = Chip + '_backup_' + time.strftime('%Y-%m-%d_%H-%M-%S') + '.TPX3'
@@ -230,7 +230,7 @@ class file_logger(object):
             json.dump(data, backup_file)
             return True
         else:
-            print('Error: tried to call existing tmp file')
+            print('tpx3_logger::write_tmp_backup: Error: tried to call existing tmp file')
             return False
 
     def delete_tmp_backups(days_to_hold = None):
@@ -272,7 +272,7 @@ class file_logger(object):
                 data = json.load(open(user_path + os.sep + file, 'r'))
                 return data
             else:
-                print('Error: File does not exist')
+                print('tpx3_logger::read_backup: Error: File {} does not exist'.format(file))
                 return False
 
     def get_newest_backup_file():
@@ -342,7 +342,7 @@ class file_logger(object):
         if TPX3_datalogger.name_valid(name) == True:
             value = backup_data[name]
             return value
-        print('Error: Unknown data name')
+        print('tpx3_logger::get_backup_value: Error: Unknown data name: {}'.format(name))
         return False
 
 
@@ -364,7 +364,8 @@ class TPX3_data_logger(object):
                             'VTP_coarse', 'VTP_fine', 'Ibias_CP_PLL', 'PLL_Vcntrl',
                             'Equalisation_path', 'Mask_path', 'Run_name', 'Polarity', 'Op_mode', 'Fast_Io_en',
                             'clk_fast_out', 'ClkOut_frequency_src', 'AckCommand_en', 'SelectTP_Ext_Int',
-                            'clkphasediv', 'clkphasenum', 'PLLOutConfig', 'Readout_Speed', 'TP_Period', 'Sense_DAC']
+                            'clkphasediv', 'clkphasenum', 'PLLOutConfig', 'Readout_Speed', 'TP_Period', 
+                            'Sense_DAC','ena_cpp', 'shutter_time']
         self.data = self.default_config()
 
     def default_config(self):
@@ -413,7 +414,9 @@ class TPX3_data_logger(object):
                 'PLLOutConfig' : 0,
                 'Readout_Speed': 0.1,
                 'TP_Period': 3,
-                'Sense_DAC': 29}
+                'Sense_DAC': 29,#} default ends here
+                'shutter_time': 0.01,
+                'ena_cpp': False} # my crap
 
     def is_valid(self, config):
         if not isinstance(config, dict):
@@ -486,16 +489,22 @@ class TPX3_data_logger(object):
             elif name in ['Chip1_name', 'Chip2_name', 'Chip3_name', 'Chip4_name', 'Chip5_name', 'Chip6_name', 'Chip7_name']: #For multichip upgrade
                 pass
             else:
+                if(name=='shutter_time'):
+                    print("writing data forshutter time: {}".format(value))
                 self.data[name] = value
                 return True
-        print('Error: Unknown data name')
+        print('tpx3_logger::write_value: Error: Unknown data name: {}'.format(name))
         return False
 
     def read_value(self, name):
         if self.name_valid(name) == True:
             value = self.data[name]
+
+            if(name=='ena_cpp' or name=='shutter_time'):
+                print("{} is a valid name with value = {}!".format(name, value))
+
             return value
-        print('Error: Unknown data name')
+        print('tpx3_logger::write_value: Error: Unknown data name: {}'.format(name))
         return False
 
     def get_run_name(self, scan_type = None):
@@ -518,7 +527,7 @@ class TPX3_data_logger(object):
         if self.is_valid(config):
             self.data = config
             return True
-        print('Error: Corrupted data')
+        print('tpx3_logger::set_data: Error: Corrupted data')
         return False
 
     def get_chipnames(self):
@@ -541,7 +550,7 @@ class TPX3_data_logger(object):
                         number_of_links += 1
                 return number_of_links
             else:
-                print('Name of Chipname not in list')
+                print('Name {} is not in Chipname list'.format(chipname))
                 return False
 
     def change_link_status(self, link, status):
@@ -562,7 +571,7 @@ class TPX3_data_logger(object):
                             if int(link_status) in [2, 4, 6, 8]:
                                 link_status = int(link_status) - 1
                         else:
-                            print('Error: Unknown link status')
+                            print('tpx3_logger::change_link_status: Error: Unknown link status-> {} for link {}'.format(int(link_status), link))
                             return False
                     self.final_list.append([element_list[0], element_list[1], element_list[2], element_list[3], element_list[4], link_status])
                 self.data[name] = self.final_list
@@ -582,10 +591,10 @@ class TPX3_data_logger(object):
                     if chip_link == link:
                         return int(link_status)
             else:
-                print('Error: Unknown link status')
+                print('tpx3_logger::get_link_status: Error: Unknown link status for link {}'.format(i))
                 return False
         else:
-            print('No link data, run Init')
+            print('tpx3_logger::get_link_status: No link data, run Init')
             return False
 
     def write_to_yaml(self, name):

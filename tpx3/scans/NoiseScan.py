@@ -45,6 +45,8 @@ class NoiseScan(ScanBase):
             If there is a status queue information about the status of the scan are put into it
         '''
 
+        print("tpx3::scans::NoiseScan::scan: using shutter time of {} s".format(shutter))
+
         # Check if parameters are valid before starting the scan
         if Vthreshold_start < 0 or Vthreshold_start > 2911:
             raise ValueError("Value {} for Vthreshold_start is not in the allowed range (0-2911)".format(Vthreshold_start))
