@@ -12,7 +12,7 @@ from matplotlib.backends.backend_gtk3agg import (FigureCanvasGTK3Agg as FigureCa
 import numpy as np
 from multiprocessing import Process, Queue, Pipe
 
-from UI.GUI.PlotWidget import plotwidget
+from UI.GUI.PlotWidget import plotwidget, TOTplot
 from UI.tpx3_logger import file_logger, TPX3_datalogger, mask_logger, equal_logger
 from UI.CLI.tpx3_cli import TPX3_multiprocess_start
 import tpx3.utils as utils
@@ -22,6 +22,7 @@ from UI.GUI.sim_producer.producer_sim_manager import ProducerSimManager
 
 class GUI_Plot1(Gtk.Window):
     def __init__(self, data_queue, startet_from = 'GUI', plottype = None, integration_length = None, color_depth = None, colorsteps = None):
+        print("UI::GUI::GUI::Gui_plot_settings::GUI_Plot1: __init__")
         self.active = 'False'
         Gtk.Window.__init__(self, title = 'Plot')
         self.connect('delete-event', self.window_destroy)
@@ -63,7 +64,7 @@ class GUI_Plot1(Gtk.Window):
 
             if TPX3_datalogger.read_value('plottype') == 'normal':
                 self.plotwidget.change_colormap(colormap = self.plotwidget.fading_colormap(TPX3_datalogger.read_value('colorsteps')))
-                print("data Queue size = {}".format(data_queue.qsize()), flush=True)
+                print("tpx3::UI::GUI::GUI.py: data Queue size = {}".format(data_queue.qsize()), flush=True)
                 self.Tag = GLib.idle_add(self.plotwidget.update_plot)
             elif TPX3_datalogger.read_value('plottype') == 'occupancy':
                 self.plotwidget.change_colormap(colormap = cm.viridis, vmax = TPX3_datalogger.read_value('color_depth'))
@@ -130,6 +131,8 @@ class GUI_Plot1(Gtk.Window):
 
 class GUI_Plot_settings(Gtk.Window):
     def __init__(self,plotwidget):
+        
+        print("UI::GUI::GUI::Gui_plot_settings::UGI_plot_settings: _init__")
         Gtk.Window.__init__(self, title = 'Plot Settings')
         self.connect('delete-event', self.window_destroy)
 
@@ -194,6 +197,7 @@ class GUI_Plot_settings(Gtk.Window):
         self.color_depth_value = self.color_depth.get_value_as_int()
 
     def on_OKbutton_clicked(self, widget):
+        print("UI::GUI::GUI::Gui_plot_settings::on_OKbutton_clicked")
         self.plot_depth_value = self.plot_depth.get_value_as_int()
         self.color_depth_value = self.color_depth.get_value_as_int()
         if self.plotwidget.get_plottype() == 'normal':
@@ -201,7 +205,7 @@ class GUI_Plot_settings(Gtk.Window):
             self.destroy()
 
         elif self.plotwidget.get_plottype() == 'occupancy':
-            self.plotwidget.change_colormap(colormap = cm.viridis, vmax = self.color_depth_value)
+            self.plotwidget.change_colormap(colorupdate_plotmap = cm.viridis, vmax = self.color_depth_value)
             self.plotwidget.set_occupancy_length(self.plot_depth_value)
             self.plotwidget.reset_occupancy()
             self.destroy()
@@ -2809,6 +2813,7 @@ class GUI_Plot_Box(Gtk.Window):
     def __init__(self, plotname, figure, figure_width, figure_height):
         Gtk.Window.__init__(self, title = plotname)
         self.connect('delete-event', self.window_destroy)
+        print("UI::GUI::GUI::Gui_plot_settings::GUI_Plot_Box: __init__")
         self.connect('button_press_event', self.window_on_button_press_event)
         canvas = FigureCanvas(figure)
         canvas.set_size_request(figure_width, figure_height)
@@ -3034,6 +3039,7 @@ class GUI_Main(Gtk.Window):
 
     #######################################################################################################
         ### Page 2
+        print("ON PAGE chip1")
         ChipName = 'Chip1'
         self.page2 = Gtk.Box()
         page2_label = Gtk.Label()
@@ -3045,10 +3051,27 @@ class GUI_Main(Gtk.Window):
         self.page2.grid.set_column_spacing(10)
         self.page2.add(self.page2.grid)
         self.page2.space = Gtk.Label()
-        self.page2.space.set_text('         ')
+        self.page2.space.set_text('AAAAAAAAAA')
+        #self.page2.space.set_text('         ')
         self.page2.space1 = Gtk.Label()
-        self.page2.space1.set_text('    ')
+        #self.page2.space1.set_text('    ')
+        self.page2.space1.set_text('BBBBB')
 
+        #------------------------------------------------
+        #self.plotbutton = Gtk.Button(label = 'Show Plot')
+        #self.simulationbutton = Gtk.Button(label = 'Start Simulation')
+        #self.plotbutton.connect('clicked', self.on_plotbutton_clicked)
+        #self.simulationbutton.connect('clicked', self.on_simulationbutton_clicked)
+        #self.page2.grid.attach(self.plotbutton, 0, 0, 1, 1)
+        #self.page2.grid.attach(self.simulationbutton, 0, 1, 1, 1)
+
+        #self.plotwidget = plotwidget(data_queue = self.data_queue)
+        #self.page2.pack_end(self.plotwidget.canvas, True, False, 0)
+        #self.page2.pack_end(self.page2.space, True, False, 0)
+        #self.page2.pack_end(self.page2.space1, True, False, 0)
+        #self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
+        ##                             ^ calls plotwidget every 250 ms
+        #-------------------------------------------------
         self.plotbutton = Gtk.Button(label = 'Show Plot')
         self.simulationbutton = Gtk.Button(label = 'Start Simulation')
         self.plotbutton.connect('clicked', self.on_plotbutton_clicked)
@@ -3057,10 +3080,22 @@ class GUI_Main(Gtk.Window):
         self.page2.grid.attach(self.simulationbutton, 0, 1, 1, 1)
 
         self.plotwidget = plotwidget(data_queue = self.data_queue)
-        self.page2.pack_end(self.plotwidget.canvas, True, False, 0)
-        self.page2.pack_end(self.page2.space, True, False, 0)
-        self.page2.pack_end(self.page2.space1, True, False, 0)
+        # adding testplot        
+
+        self.totplot_widget = TOTplot(data_queue = self.data_queue)
+
+        # packing buttons below
+        self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
+        self.page2.pack_start(self.totplot_widget.canvas_tot, True, False, 0)
+        self.page2.pack_start(self.page2.space, True, False, 0)
+        self.page2.pack_start(self.page2.space1, True, False, 0)
+        #self.page2.pack_end(self.plotbutton, True, False, 0)
+        #self.page2.pack_end(self.simulationbutton, True, False, 0)
+
+        self.Tag3 = GLib.timeout_add(1000, self.totplot_widget.upd_histo)
+        #self.Tag3 = GLib.idle_add(self.totplot_widget.upd_histo)
         self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
+        #                             ^ calls plotwidget every 250 ms
 
         self.init_done = True
 
@@ -3081,10 +3116,13 @@ class GUI_Main(Gtk.Window):
         self.on_notebook_page = index
         if self.init_done and (not self.plot1_window_open):
             if index == 1:
-                self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
+                self.Tag2 = GLib.timeout_add(1000, self.plotwidget.update_plot)
+                self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
                 self.start_converter()
             elif index == 0:
                 GLib.source_remove(self.Tag2)
+                GLib.source_remove(self.Tag3)
+                self.totplot_widget.tot_array = np.array([], dtype=np.uint16)
                 self.terminate_converter()
 
 

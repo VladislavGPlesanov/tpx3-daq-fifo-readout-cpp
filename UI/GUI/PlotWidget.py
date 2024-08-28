@@ -2,6 +2,7 @@
 
 import numpy as np
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_gtk3agg import (FigureCanvasGTK3Agg as FigureCanvas)
 from matplotlib.colors import ListedColormap
@@ -32,11 +33,10 @@ class plotwidget(object):
         cmap = self.fading_colormap(5)
         self.data_queue = data_queue
 
-        self.scatter = self.ax.scatter(self.x_vals, self.y_vals, c = [], s = 1, marker = 's', cmap = cmap, vmin = 0, vmax = 1)
-
+        self.scatter = self.ax.scatter(self.x_vals, self.y_vals, c = [], s = 1, marker = '.', cmap = cmap, vmin = 0, vmax = 1)
+        #                                                                                 ^ this one was "s"
         self.canvas = FigureCanvas(self.fig)
         self.canvas.set_size_request(500, 500)
-
         self.ax.plot()
 
     def fading_colormap(self, steps = 5):
@@ -81,7 +81,7 @@ class plotwidget(object):
 
     def update_plot(self):
         # some temp checks 
-    
+        print("UI::GUI::PlotWidget::update_plot") 
         print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
         print("UPD plot: arrays {},{},{} ".format(self.x_vals.shape, self.y_vals.shape, self.t_vals.shape),flush=True)
         #print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
@@ -258,3 +258,62 @@ class plotwidget(object):
     def set_color_steps(self, color_steps):
         self.colorsteps = color_steps
         return True
+
+class TOTplot(object):
+    def __init__(self, data_queue):
+        
+        # adding another subplot
+        self.localcnt = 0
+        self.figtot = Figure(figsize=(5,5),dpi=100)
+        self.ax_tot = self.figtot.add_subplot(111)
+        #self.figtot.subplots_adjust(left = 0.2, top = 0.9)
+        self.ax_tot.set_xlabel('TOT')
+        self.ax_tot.set_ylabel('Entries')
+        self.ax_tot.set_yscale('log')
+        self.data_queue = data_queue
+        self.tot_array = np.array([], dtype=np.uint16)
+        # some test plot here
+        self.tot_histo = self.ax_tot.hist(self.tot_array,
+                                          bins=103,
+                                          range=(0,1030), 
+                                          #density = True,
+                                          histtype='stepfilled', 
+                                          facecolor='g'
+                                          )
+        self.canvas_tot = FigureCanvas(self.figtot)
+        self.canvas_tot.set_size_request(500,500)
+        self.ax_tot.plot()
+
+    def get_tot_val(self):
+
+        tot_val = np.empty(0,np.uint16)
+
+        if not self.data_queue.empty():
+            _,_,tot_val = self.data_queue.get()
+        return tot_val
+
+    def upd_histo(self):
+        
+        new_tot = self.get_tot_val()
+        self.tot_array = np.concatenate([self.tot_array, new_tot])
+        print("UI::GUI::PlotWidget::TOTplot: TOT array size: {}, last entries-> {}".format(
+            self.tot_array.shape[0],
+            self.tot_array[len(self.tot_array)-32:len(self.tot_array)])
+        ,flush=True)
+
+        self.tot_histo = self.ax_tot.hist(self.tot_array,
+                                          bins=103,
+                                          range=(0,1030), 
+                                          #density = True,
+                                          histtype='stepfilled', 
+                                          facecolor='g'
+                                          )
+        self.canvas_tot.draw()
+        self.localcnt +=1
+
+        if(self.localcnt == 20):
+           np.savetxt("ebala.txt", self.tot_array, delimiter=',')
+
+        return True
+
+
