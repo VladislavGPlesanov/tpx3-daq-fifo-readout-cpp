@@ -135,7 +135,7 @@ class FifoReadout(object):
         return result / float(self._moving_average_time_period)
 
     def start(self, callback=None, errback=None, reset_rx=False, reset_sram_fifo=False, reset_errors=True, clear_buffer=False, fill_buffer=False, no_data_timeout=None):
-        print("OLOLO, starting fifo readout")
+        #print("OLOLO, starting fifo readout")
         if self._is_running:
             raise RuntimeError('Readout already running: use stop() before start()')
 
@@ -171,12 +171,12 @@ class FifoReadout(object):
             self.worker_thread.start()
         # if flag set - using cpp readout else use legacy python routine
         if self.ena_cpp:
-            print("tpx3::fifo_readout::start: USING [CPP] readout")
+            #print("tpx3::fifo_readout::start: USING [CPP] readout")
             self.readout_thread = Thread(target=self.cpp_readout, name='CppReadoutThread', kwargs={'no_data_timeout': no_data_timeout})       
             self.readout_thread.daemon = True
             self.readout_thread.start()
         else:
-            print("tpx3::fifo_readout::start: USING [PY] readout")
+            #print("tpx3::fifo_readout::start: USING [PY] readout")
             self.readout_thread = Thread(target=self.readout, name='ReadoutThread', kwargs={'no_data_timeout': no_data_timeout})
             self.readout_thread.daemon = True
             self.readout_thread.start()
@@ -238,7 +238,7 @@ class FifoReadout(object):
 #    alternative readout function in c++
 #
     def cpp_readout(self, no_data_timeout=None):
-        print("[TEST] using [CPP] readout")
+        #print("[TEST] using [CPP] readout")
         self.logger.debug('Starting %s', self.readout_thread.name)
         interval_ms = round(self.readout_interval*1000)
         result = readoutToDeque(self, 

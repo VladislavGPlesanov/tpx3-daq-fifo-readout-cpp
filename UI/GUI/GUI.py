@@ -20,6 +20,86 @@ from UI.GUI.converter import utils as conv_utils
 from UI.GUI.converter.converter_manager import ConverterManager
 from UI.GUI.sim_producer.producer_sim_manager import ProducerSimManager
 
+## defining some common button functions
+# could possibly put these as a sparate class
+# (we anyway have many toggle buttons and other ones)
+#
+#def default_button(parameter, name, button_label):
+#    if not isinstance(name, str) or not isinstance(button_label,str):
+#        raise TypeError("default_button(parameter, name, button_label)\n \'name\' and \'button_label\' must be type <str>")
+#        
+#    parameter = TPX3_datalogger.read_value(str(name))
+#    label = Gtk.Label()
+#    label.set_text(button_label)
+#    button = Gtk.ToggleButton()
+#    if(parameter):
+#        button.set_active(True)
+#        button.set_label('  ON  ')
+#    else:
+#        button.set_active(False)
+#        button.set_label('  OFF  ')
+#    return button, label
+#
+#def toggle_button(parameter, true_val, false_val, button):
+#    if(button.get_active()):
+#        parameter = true_val
+#        button.set_label('  ON  ')
+#    else:              
+#        parameter = false_val
+#        button.set_label('  OFF  ')
+#
+############### fokin' with window style ######################################
+
+print("-----------------------------------------------")
+print(Gtk.Settings.get_default().get_property('gtk-theme-name'))
+print("-----------------------------------------------")
+
+Gtk.Settings.get_default().set_property('gtk-theme-name', 'Yaru-olive-dark')
+#Gtk.Settings.get_default().set_property('gtk-theme-name', 'Yaru-red')
+#Gtk.Settings.get_default().set_property('gtk-theme-name', 'Adwaita-dark')
+
+
+###############################################################################
+
+class GUI_totplot(Gtk.Window):
+    def __init__(self, data_queue):
+        print("UI::GUI::GUI::Gui_plot_settings::GUI_totplot: __init__")
+        self.active = 'False'
+        Gtk.Window.__init__(self, title = 'TOT histogram')
+        self.connect('delete-event', window_destroy)
+        
+        self.set_default_size(400,400)
+        # ommiting self.started_from
+        self.Tag = None
+
+        self.box = Gtk.Box(spacing = 6, orientation = Gtk.Orientation.HORIZONTAL)
+        self.add(self.box)
+
+        self.plotwidget = TOTplot(data_queue = data_queue)
+        self.plotbox = Gtk.EventBox()
+        self.plotbox.add(self.plotwidget.canvas_tot)
+        #self.plotbox.connect('button_press_event', self.totplot_right_clicked)
+        self.box.pack_start(self.plotbox, True, True, 0)
+
+        # ommiting buttons for now
+        
+        # ommiting check for GUI or CLI startup
+        
+        self.Tag = GLib.idle_add(self.plotwidget.upd_histo)
+
+        self.show_all() 
+        
+        # ---------- defining actions for GUI_totplot -----------
+
+    def stop_odle_job(self):
+        GLib.source_remove(self.Tag)
+
+    def window_destroy(self, event, widget):
+        GLib.source_remove(self.Tag)
+        GUI.close_totplot()
+        self.destroy()
+
+
 class GUI_Plot1(Gtk.Window):
     def __init__(self, data_queue, startet_from = 'GUI', plottype = None, integration_length = None, color_depth = None, colorsteps = None):
         print("UI::GUI::GUI::Gui_plot_settings::GUI_Plot1: __init__")
@@ -958,7 +1038,8 @@ class GUI_Noise_Scan(Gtk.Window):
                                                             Vthreshold_start = self.Threshold_start_value,
                                                             Vthreshold_stop = self.Threshold_stop_value,
                                                             shutter = self.shutter_time,
-                                                            ena_cpp = TPX3_datalogger.read_value(name = 'ena_cpp'), # my shit..
+                                                            ena_cpp = TPX3_datalogger.read_value(name = 'ena_cpp'), # enablin' cpp readout
+                                                            automask = TPX3_datalogger.read_value(name = 'automask'), # enablin' automask
                                                             thrfile = TPX3_datalogger.read_value(name = 'Equalisation_path'),
                                                             maskfile = TPX3_datalogger.read_value(name = 'Mask_path'),
                                                             progress = GUI.get_progress_value_queue(),
@@ -1448,25 +1529,66 @@ class GUI_Additional_Settings(Gtk.Window):
         Readout_Speed_entry_label = Gtk.Label()
         Readout_Speed_entry_label.set_text('Readout Speed')
 
-        # addding cpp enable in settings
-        #
-        self.enable_cpp = TPX3_datalogger.read_value(name = 'ena_cpp')
-        #self.enable_cpp = False
-        #enable_cpp = False
-    
-        cpp_switch_label = Gtk.Label()
-        cpp_switch_label.set_text('Enable C++')
-        self.cpp_switch = Gtk.Switch()
-        self.cpp_switch.connect("notify::active", self.on_cpp_switch_activated)
-        self.cpp_switch.set_valign(Gtk.Align.CENTER)
-        self.cpp_switch.set_halign(Gtk.Align.CENTER)
-        if self.enable_cpp == True:
-            self.cpp_switch.set_active(True)
-        else:
-            self.cpp_switch.set_active(False)
+        # addding cpp enable in settings as a toggle button
 
-        #self.cpp_switch.set_margin(20)
-        #self.cpp_switch.set_active(False)
+        #def cpp_button_changed(button):
+        #    ctx = button.get_style_context()
+        #    if(button.get_active()):
+        #        #ctx.remove_class('NOT_ACTIVE')
+        #        #ctx.add_class('IS_ACTIVE')
+        #    else:
+        #        ctx.remove_class('IS_ACTIVE')
+        #        ctx.add_class('NOT_ACTIVE')
+
+
+        self.enable_cpp = TPX3_datalogger.read_value(name = 'ena_cpp')
+        cpp_label = Gtk.Label()
+        cpp_label.set_text('Enable C++')
+        self.set_ena_cpp = Gtk.ToggleButton()
+        self.wrap_set_ena_cpp = Gtk.EventBox()
+        self.wrap_set_ena_cpp.add(self.set_ena_cpp)
+        self.wrap_set_ena_cpp.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray"))
+        #context = self.set_ena_cpp.get_style_context()
+        #print("eanble_cpp button - style context:{}".format(context))
+        if(self.enable_cpp==True):
+            self.set_ena_cpp.set_active(True)
+            self.set_ena_cpp.set_label('  ON  ')
+            self.wrap_set_ena_cpp.modify_bg(Gtk.StateType.ACTIVE, Gdk.color_parse("green"))
+            #context.add_class('IS_ACTIVE')
+        else: 
+            self.set_ena_cpp.set_active(False)
+            self.set_ena_cpp.set_label('  OFF  ')
+            #context.add_class('NOT_ACTIVE')
+            self.wrap_set_ena_cpp.modify_bg(Gtk.StateType.ACTIVE, Gdk.color_parse("red"))
+        self.set_ena_cpp.connect('toggled', self.set_cpp_ena_toggled)
+
+
+        # button for automask based on the scans
+        self.automask_ena = TPX3_datalogger.read_value('automask')
+        automask_label = Gtk.Label()
+        automask_label.set_text('Enable automask')
+        self.set_automask_button = Gtk.ToggleButton()
+        if(self.automask_ena==True):
+            self.set_automask_button.set_active(True)
+            self.set_automask_button.set_label('  ON  ')            
+        else:
+            self.set_automask_button.set_active(False)
+            self.set_automask_button.set_label('  OFF  ')            
+        self.set_automask_button.connect('toggled', self.set_automask_button_toggled)
+
+        # ---------------------------------
+        #   same as aboove but acomplished in 3 lines...
+        
+        #self.automask_ena = None
+        #self.set_automask_button, automask_label = default_button(self.automask_ena, 
+        #                                                          'automask',
+        #                                                          'Enable automask')        
+        ##self.set_automask_button.connect('toggled', self.set_automask_button_toggled)        
+        #self.set_automask_button.connect('toggled', toggle_button(self.automask_ena,
+        #                                                          True,
+        #                                                          False,
+        #                                                          self.set_automask_button
+        #                                                          ))        
 
         #Expert check box
         self.expert_checkbox = Gtk.CheckButton(label='Expert')
@@ -1554,6 +1676,13 @@ class GUI_Additional_Settings(Gtk.Window):
                 self.link_enable_button[link_number].set_label(' OFF  ')
             self.link_enable_button[link_number].connect('toggled', self.Link_enable_button_toggled, link_number)
 
+        # refresh link statuss
+        
+        self.refresh_links_button = Gtk.Button(label='Refresh link status')
+        #ctx = self.refresh_links_button.get_style_context()
+        self.refresh_links_button.connect('clicked', self.on_refresh_links_button_clicked)  
+        
+
         #Save Button
         self.Savebutton = Gtk.Button(label = 'Save')
         self.Savebutton.connect('clicked', self.on_Savebutton_clicked)
@@ -1571,27 +1700,40 @@ class GUI_Additional_Settings(Gtk.Window):
         grid.attach(self.TP_Period, 2, 5, 2, 1)
         grid.attach(Readout_Speed_entry_label, 0, 6, 2, 1)
         grid.attach(self.Readout_Speed_entry, 2, 6, 3, 1)
-        # squeezing in cpp enabling
-        grid.attach(cpp_switch_label, 0, 7, 2, 1)
-        grid.attach(self.cpp_switch, 2, 7, 2, 1)
-        # column index from this point should be +1 (if i delete upper two -1)
-        grid.attach(Space, 0, 8, 3, 1)
-        grid.attach(self.TP_Ext_Int_button_label, 0, 9, 2, 1)
-        grid.attach(self.TP_Ext_Int_button, 2, 9, 2, 1)
-        grid.attach(self.AckCommand_en_button_label, 0, 10, 2, 1)
-        grid.attach(self.AckCommand_en_button, 2, 10, 2, 1)
-        grid.attach(self.ClkOut_frequency_combo_label, 0, 11, 2, 1)
-        grid.attach(self.ClkOut_frequency_combo, 2, 11, 3, 1)
-        grid.attach(self.dropdown_label, 0, 12, 2, 1)
-        grid.attach(self.dropdown, 2, 12, 3, 1)
-        grid.attach(self.Space2, 0, 13, 3, 1)
-        grid.attach(self.Link_label, 0, 13, 7, 1)
+        # --- squeezing new buttons from this point ---
+        grid.attach(cpp_label, 0, 7, 2, 1)
+        #grid.attach(self.set_ena_cpp, 2, 7, 2, 1)
+        grid.attach(self.wrap_set_ena_cpp, 2, 7, 2, 1)
+        grid.attach(automask_label, 0, 8, 2, 1)
+        grid.attach(self.set_automask_button, 2, 8, 2, 1)
+        # -------------------------------------------------
+        #                  grid.attach(self.thing, i, j, k, l)
+        #                                             ^   
+        # column index (j) from this point should be +1 for each 
+        # new button+label (-1 for each deleted)              
+        grid.attach(Space, 0, 9, 3, 1)
+        grid.attach(self.TP_Ext_Int_button_label, 0, 10, 2, 1)
+        grid.attach(self.TP_Ext_Int_button, 2, 10, 2, 1)
+        grid.attach(self.AckCommand_en_button_label, 0, 11, 2, 1)
+        grid.attach(self.AckCommand_en_button, 2, 11, 2, 1)
+        grid.attach(self.ClkOut_frequency_combo_label, 0, 12, 2, 1)
+        grid.attach(self.ClkOut_frequency_combo, 2, 12, 3, 1)
+        grid.attach(self.dropdown_label, 0, 13, 2, 1)
+        grid.attach(self.dropdown, 2, 13, 3, 1)
+        grid.attach(self.Space2, 0, 14, 3, 1)
+        grid.attach(self.Link_label, 0, 14, 7, 1)
         for link_number in range(self.hardware_links):
-            grid.attach(self.link_label[link_number], link_number % 8, 14 + (2 * (link_number // 8)), 1, 1)
-            grid.attach(self.link_enable_button[link_number], link_number % 8, 15 + (2 * (link_number // 8)), 1, 1)
-        grid.attach(self.Space3, 0, 16 + 2 * ((self.hardware_links - 1) // 8), 3, 1)
-        grid.attach(self.Savebutton, 8, 17 + 2 * ((self.hardware_links - 1) // 8), 1, 1)
-
+            grid.attach(self.link_label[link_number],
+                        link_number % 8, 15 + (2 * (link_number // 8)), 
+                        1, 
+                        1)
+            grid.attach(self.link_enable_button[link_number], link_number % 8, 16 + (2 * (link_number // 8)), 1, 1)
+        grid.attach(self.Space3, 0, 17 + 2 * ((self.hardware_links - 1) // 8), 3, 1)
+        # adding link refresh button
+        grid.attach(self.refresh_links_button, 3, 18, 2, 1)
+        #
+        grid.attach(self.Savebutton, 8, 19 + 2 * ((self.hardware_links - 1) // 8), 1, 1)
+        
         self.show_all()
 
         self.TP_Ext_Int_button_label.hide()
@@ -1607,27 +1749,27 @@ class GUI_Additional_Settings(Gtk.Window):
         for link_number in range(self.hardware_links):
             self.link_label[link_number].hide()
             self.link_enable_button[link_number].hide()
+        self.refresh_links_button.hide()
         self.resize(1,1)
 
     def TP_Period_set(self, event):
         self.TP_Period_value = self.TP_Period.get_value_as_int()
 
     # tryna' include py-to-cpp readout switch in "settings"
-    def on_cpp_switch_activated(self, switch, gparam):
-
-        state = self.cpp_switch.get_active()
-        if(state == True):
+    def set_cpp_ena_toggled(self,button):
+        #context = button.get_style_context()
+        if(self.set_ena_cpp.get_active()):
             self.enable_cpp = True
-            TPX3_datalogger.write_value(name = 'ena_cpp', value = self.enable_cpp)
-            print("enablin' cpp readout - {}".format(self.enable_cpp))
-            #self.enable_cpp = True
-
+            self.set_ena_cpp.set_label('  ON  ')
+            #context.remove_class('NOT_ACTIVE')
+            #context.add_class('IS_ACTIVE')
+            self.wrap_set_ena_cpp.modify_bg(Gtk.StateType.ACTIVE, Gdk.color_parse("green"))
         else:
             self.enable_cpp = False
-            TPX3_datalogger.write_value(name = 'ena_cpp', value = self.enable_cpp)
-            print("disablin' cpp readout - {}".format(self.enable_cpp))
-            #self.enable_cpp = False
-
+            self.set_ena_cpp.set_label('  OFF  ') 
+            #context.remove_class('IS_ACTIVE')
+            #context.add_class('NOT_ACTIVE')
+            self.wrap_set_ena_cpp.modify_bg(Gtk.StateType.ACTIVE, Gdk.color_parse("red"))
 
     def on_expert_toggled(self, button):
         self.expert_value = button.get_active()
@@ -1645,6 +1787,7 @@ class GUI_Additional_Settings(Gtk.Window):
             for link_number in range(self.hardware_links):
                 self.link_label[link_number].show()
                 self.link_enable_button[link_number].show()
+            self.refresh_links_button.show()
             self.resize(1,1)
         else:
             self.TP_Ext_Int_button_label.hide()
@@ -1660,6 +1803,7 @@ class GUI_Additional_Settings(Gtk.Window):
             for link_number in range(self.hardware_links):
                 self.link_label[link_number].hide()
                 self.link_enable_button[link_number].hide()
+            self.refresh_links_button.hide()
             self.resize(1,1)
 
     def readout_speed_entered(self, widget):
@@ -1676,6 +1820,14 @@ class GUI_Additional_Settings(Gtk.Window):
             state = 0
             self.set_polarity_button.set_label('  POS  ')
         self.polarity_value = state
+
+    def set_automask_button_toggled(self, button):
+        if(self.set_automask_button.get_active()):
+            self.automask_ena = True
+            self.set_automask_button.set_label('  ON  ')
+        else:
+            self.automask_ena = False
+            self.set_automask_button.set_label('  OFF  ')
 
     def Fast_IO_button_toggled(self, button):
         if self.Fast_IO_button.get_active():
@@ -1732,6 +1884,16 @@ class GUI_Additional_Settings(Gtk.Window):
     def dropdown_changed(self, widget):
         self.sense_DAC_value = self.sense_DAC_dict[self.dropdown.get_active_text()]
 
+    def on_refresh_links_button_clicked(self, clicked):
+
+        for link_number in range(self.hardware_links):
+            if TPX3_datalogger.get_link_status(link_number) in [1, 3, 5, 7]:
+                self.link_enable_button[link_number].set_active(True)
+                self.link_enable_button[link_number].set_label(' ON  ')
+            else:
+                self.link_enable_button[link_number].set_active(False)
+                self.link_enable_button[link_number].set_label(' OFF  ')
+
     def on_Savebutton_clicked(self, widget):
         # check if some process is runing
         if GUI.get_process_alive():
@@ -1764,8 +1926,10 @@ class GUI_Additional_Settings(Gtk.Window):
         TPX3_datalogger.write_value(name = 'Readout_Speed', value = self.Readout_Speed_value)
         TPX3_datalogger.write_value(name = 'TP_Period', value = self.TP_Period_value)
         # my crap
-        #TPX3_datalogger.write_value(name = 'ena_cpp', value = enable_cpp)
-            
+        TPX3_datalogger.write_value(name = 'ena_cpp', value = self.enable_cpp)
+        TPX3_datalogger.write_value(name = 'automask', value = self.automask_ena)
+
+
         for link_number in range(self.hardware_links):
             TPX3_datalogger.change_link_status(link_number, self.link_enable[link_number])
 
@@ -2871,6 +3035,9 @@ class GUI_Main(Gtk.Window):
         self.plot1_window_open = False
         self.converter_process = None
         self.plot1_window = None
+        # params for totplot
+        #self.totplot_window_open = False
+        #self.totplot_window = None
         self.pipe_dest_conn, self.pipe_source_conn = Pipe(False)
         self.simulation_running = False
         self.simulator_process = None
@@ -3073,11 +3240,52 @@ class GUI_Main(Gtk.Window):
         ##                             ^ calls plotwidget every 250 ms
         #-------------------------------------------------
         self.plotbutton = Gtk.Button(label = 'Show Plot')
-        self.simulationbutton = Gtk.Button(label = 'Start Simulation')
         self.plotbutton.connect('clicked', self.on_plotbutton_clicked)
+
+        self.simulationbutton = Gtk.Button(label = 'Start Simulation')
         self.simulationbutton.connect('clicked', self.on_simulationbutton_clicked)
+
+        #self.totplot_button = Gtk.Button(label = 'TOT plot')
+        #self.totplot_button.connect('clicked', self.on_totplot_button_clicked)
+
+        # -----------------------------------------------------
+        # adding link status to page 2 (monitoring only) 
+
+        self.Link_status = Gtk.Label()
+        self.Link_status.set_text('Link states:')
+        self.hw_links = TPX3_datalogger.read_value('hardware_links')
+        self.link_label = []
+        self.link_status = []
+        self.link_status_button = []
+        for link_number in range(self.hw_links):
+            temp_link_label = Gtk.Label()
+            temp_link_label.set_text(str(link_number))
+            self.link_label.append(temp_link_label)
+            temp_link_status_button = Gtk.Button()
+            self.link_status_button.append(temp_link_status_button)
+            status = TPX3_datalogger.get_link_status(link_number)
+            #print(f"status for {link_number} is {status}")
+            if status in [1, 3, 5, 7]:
+                self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
+                self.link_status_button[link_number].get_style_context().add_class('IS_ACTIVE')                
+            else:
+                self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
+                self.link_status_button[link_number].get_style_context().add_class('NOT_ACTIVE')                
+
+
+        # with a refresh button
+        self.reload_status = Gtk.Button(label='Update')
+        self.reload_status.connect('clicked', self.reload_status_clicked)
+
+        #-------------------------------------------------
+
         self.page2.grid.attach(self.plotbutton, 0, 0, 1, 1)
         self.page2.grid.attach(self.simulationbutton, 0, 1, 1, 1)
+        self.page2.grid.attach(self.Link_status, 0, 2, 1, 1)
+        for linknr in range(self.hw_links):
+            self.page2.grid.attach(self.link_status_button[linknr], 0, 3+linknr, 1,1)
+
+        self.page2.grid.attach(self.reload_status, 0, 3+self.hw_links+1, 1,1)
 
         self.plotwidget = plotwidget(data_queue = self.data_queue)
         # adding testplot        
@@ -3085,17 +3293,14 @@ class GUI_Main(Gtk.Window):
         self.totplot_widget = TOTplot(data_queue = self.data_queue)
 
         # packing buttons below
-        self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
+        #self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
         self.page2.pack_start(self.totplot_widget.canvas_tot, True, False, 0)
         self.page2.pack_start(self.page2.space, True, False, 0)
         self.page2.pack_start(self.page2.space1, True, False, 0)
-        #self.page2.pack_end(self.plotbutton, True, False, 0)
-        #self.page2.pack_end(self.simulationbutton, True, False, 0)
 
-        self.Tag3 = GLib.timeout_add(1000, self.totplot_widget.upd_histo)
-        #self.Tag3 = GLib.idle_add(self.totplot_widget.upd_histo)
-        self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
-        #                             ^ calls plotwidget every 250 ms
+        self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
+        self.Tag2 = GLib.timeout_add(500, self.plotwidget.update_plot)
+        #                             ^ calls plotwidget every 500 ms
 
         self.init_done = True
 
@@ -3116,15 +3321,14 @@ class GUI_Main(Gtk.Window):
         self.on_notebook_page = index
         if self.init_done and (not self.plot1_window_open):
             if index == 1:
-                self.Tag2 = GLib.timeout_add(1000, self.plotwidget.update_plot)
+                self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
                 self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
                 self.start_converter()
             elif index == 0:
                 GLib.source_remove(self.Tag2)
                 GLib.source_remove(self.Tag3)
-                self.totplot_widget.tot_array = np.array([], dtype=np.uint16)
                 self.terminate_converter()
-
+                self.totplot_widget.reset_histo()
 
     ####################################################################################################
     ### Functions Page 1
@@ -3527,11 +3731,30 @@ class GUI_Main(Gtk.Window):
     ########################################################################################################################
     ### Functions Page2
 
+    def reload_status_clicked(self, button):
+ 
+        for link_number in range(self.hw_links):
+            temp_link_label = Gtk.Label()
+            temp_link_label.set_text(str(link_number))
+            self.link_label.append(temp_link_label)
+            temp_link_status_button = Gtk.Button()
+            self.link_status_button.append(temp_link_status_button)
+            status = TPX3_datalogger.get_link_status(link_number)
+            print(f"status for {link_number} is {status}")
+            if status in [1, 3, 5, 7]:
+                self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
+            else:
+                self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
+               
+
     def on_plotbutton_clicked(self, widget):
         if not self.plot1_window_open:
             self.plot1_window_open = True
             GLib.source_remove(self.Tag2)
             self.plot1_window = GUI_Plot1(data_queue = self.data_queue)
+    #def on_totplot_button_clicked(self, widget):
+    #    if not self.
+
 
     def on_simulationbutton_clicked(self, widget):
         if self.simulation_running == False:
@@ -3585,8 +3808,10 @@ class GUI_Main(Gtk.Window):
     def terminate_converter(self):
         if self.plot1_window_open:
             self.plot1_window.stop_idle_job()
+            #self.totplot_window.stop_idle_job()
         elif self.on_notebook_page == 1:
             GLib.source_remove(self.Tag2)
+            GLib.source_remove(self.Tag3)
         if self.converter_process == None:
             return
         self.pipe_source_conn.send(False)
@@ -3609,8 +3834,19 @@ class GUI_Main(Gtk.Window):
             self.terminate_converter()
         elif self.on_notebook_page == 1:
             self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
+            self.Tag3 = GLib.timeout_add(500, self.totplot_widget.upd_histo)
         else:
             self.terminate_converter()
+
+    # routine fro closing TOT plot
+    #def closed_totplot(self):
+    #    self.totplot_open = False
+    #    if self.on_notebook_page == 0:
+    #        self.terminate_converter()
+    #    elif self.on_notebook_page == 1:
+    #        self.Tag_totplot = GLib.timeout_add(250, self.totplot_widget.upd_histo)
+    #    else:
+    #        self.terminate_converter()
 
     def terminate_simulator(self):
         if self.simulator_process == None:
@@ -3641,6 +3877,15 @@ def quit_procedure(gui):
     Gtk.main_quit()
 
 def GUI_start():
+    # temp style fillding
+    cssProvider = Gtk.CssProvider()
+    cssProvider.load_from_path('UI/GUI/style.css')
+    screen = Gdk.Screen.get_default()
+    #styleContext = Gtk.StyleContext()
+    Gtk.styleContext.add_provider_for_screen(screen, 
+                                         cssProvider, 
+                                         Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    #------------------------
     GUI.connect('destroy', quit_procedure)
     GUI.show_all()
     GUI.progressbar.hide()

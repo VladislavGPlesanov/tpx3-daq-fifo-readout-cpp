@@ -14,7 +14,6 @@ class plotwidget(object):
         self.ax = self.fig.add_subplot(111, aspect='equal')
         self.ax.set_xlabel('X', size = 12)
         self.ax.set_ylabel('Y', size = 12)
-        #self.ax.yaxis.set_label_coords()
         self.fig.subplots_adjust(left = 0.15, top = 0.85)
         self.ax.axis([0, 255, 0, 255])
         self.x_vals = np.empty(0, np.uint16)
@@ -33,11 +32,27 @@ class plotwidget(object):
         cmap = self.fading_colormap(5)
         self.data_queue = data_queue
 
-        self.scatter = self.ax.scatter(self.x_vals, self.y_vals, c = [], s = 1, marker = '.', cmap = cmap, vmin = 0, vmax = 1)
-        #                                                                                 ^ this one was "s"
+        self.scatter = self.ax.scatter(self.x_vals,
+                                       self.y_vals,
+                                       c = [],
+                                       s = 1,
+                                       marker = 's',
+                                       cmap = cmap,
+                                       vmin = 0,
+                                       vmax = 1,
+                                       animated=True)
+
         self.canvas = FigureCanvas(self.fig)
         self.canvas.set_size_request(500, 500)
-        self.ax.plot()
+        #self.ax.plot()
+        self.canvas.draw()
+        self.fig_bgr = self.canvas.copy_from_bbox(self.fig.bbox)
+        # my bayan
+        # -----------------------------
+        self.ax.draw_artist(self.scatter)
+        self.canvas.blit(self.fig.bbox)
+        plt.pause(0.1)
+        # -----------------------------
 
     def fading_colormap(self, steps = 5):
         # This creates a fading colormap of 'steps' steps. Each step is more transparent,
@@ -81,10 +96,10 @@ class plotwidget(object):
 
     def update_plot(self):
         # some temp checks 
-        print("UI::GUI::PlotWidget::update_plot") 
+        #print("UI::GUI::PlotWidget::update_plot") 
         print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
         print("UPD plot: arrays {},{},{} ".format(self.x_vals.shape, self.y_vals.shape, self.t_vals.shape),flush=True)
-        #print("UPD plot: len-of-queue {}, ".format(self.data_queue.qsize()),flush=True)
+        print("UPD plot: self.length:{}, {} ".format(len(self.length),self.length[0:4]),flush=True)
 
         #Plot the fading plot with new data.
         new_xvals, new_yvals, new_tvals = self.get_new_vals()
@@ -92,11 +107,14 @@ class plotwidget(object):
         self.y_vals = np.append(self.y_vals, new_yvals)
         self.length = np.append(self.length, new_xvals.size)
 
+        #print("UPD plot: self.new_xvals.size: {}, self.i = {}".format(new_xvals.shape[0], self.i),flush=True)
         #Cut plotting arrays to n_colorsteps Timeblocks
         if self.i < (self.colorsteps):
+            #print("UPD plot: self.i({}) < (self.colorsteps)({})".format(self.i,self.colorsteps))
             self.i = self.i + 1
 
         elif self.i == (self.colorsteps):
+            #print("UPD plot: self.i({}) == (self.colorsteps ({}))".format(self.i, self.colorsteps),flush=True)
             number = np.arange(self.length[0])
             self.length = np.delete(self.length, 0)
             self.x_vals = np.delete(self.x_vals, number)
@@ -105,6 +123,8 @@ class plotwidget(object):
             self.intensity = np.delete(self.intensity, number)
 
         elif self.i > (self.colorsteps):
+            #print("UPD plot: self.i({}) > (self.colorsteps ({}))".format(self.i, self.colorsteps),flush=True)
+
             while self.i >= (self.colorsteps):
                 number = np.arange(self.length[0])
                 self.length = np.delete(self.length, 0)
@@ -114,12 +134,37 @@ class plotwidget(object):
                 self.intensity = np.delete(self.intensity, number)
                 self.i = self.i-1
 
-        if np.c_[self.x_vals, self.y_vals].size != 0:
-            self.scatter.set_offsets(np.c_[self.x_vals, self.y_vals])
+        #print("x->{}".format(self.x_vals[0:16]),flush=True)
+        #print("y->{}".format(self.y_vals[0:16]),flush=True)
+        #huya = np.c_[self.x_vals, self.y_vals]
+        #print("np.c_[x,y]->size={}".format(huya.size),flush=True)
+        #print("np.c_[x,y][0:16] - > {}".format(huya[0:16]),flush=True)
+        #print("np.c_[x,y]-> size->{}".format(huya.size()),flush=True)
+
+        xy_arr = np.c_[self.x_vals,self.y_vals]
+
+        #if np.c_[self.x_vals, self.y_vals].size != 0:
+        #       ^ if x & y are not the same length/size -> exception!
+        if xy_arr.size != 0:
+            
+            #print("UPD plot: np.c_[..].size!=0",flush=True)
+
+            #self.canvas.restore_region(self.fig_bgr)
+
+            #self.scatter.set_offsets(np.c_[self.x_vals, self.y_vals])
+            self.scatter.set_offsets(xy_arr)
             self.intensity = np.concatenate((np.array(self.intensity) - (1 / self.colorsteps), new_tvals))
             self.scatter.set_array(self.intensity)
 
-            self.canvas.draw()
+            #self.canvas.draw()
+            # -------------------------------
+            
+            self.canvas.restore_region(self.fig_bgr)
+            self.ax.draw_artist(self.scatter)
+            self.canvas.blit(self.fig.bbox)
+            self.canvas.flush_events()            
+
+            xy_arr = None
 
         return True
 
@@ -263,26 +308,60 @@ class TOTplot(object):
     def __init__(self, data_queue):
         
         # adding another subplot
-        self.localcnt = 0
+        #self.localcnt = 0
         self.figtot = Figure(figsize=(5,5),dpi=100)
         self.ax_tot = self.figtot.add_subplot(111)
         #self.figtot.subplots_adjust(left = 0.2, top = 0.9)
         self.ax_tot.set_xlabel('TOT')
         self.ax_tot.set_ylabel('Entries')
-        self.ax_tot.set_yscale('log')
         self.data_queue = data_queue
-        self.tot_array = np.array([], dtype=np.uint16)
+        # histo parameters
+        self.nbins = 103
+        self.bin_range = (0,1030)
+        self.bin_edges = np.linspace(self.bin_range[0],self.bin_range[1],self.nbins+1)
+        self.bin_cnt = np.zeros(self.nbins, dtype=np.int64)
+        # other params
+        self.logScale = False
+        ###################################
+
+        print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
+
         # some test plot here
-        self.tot_histo = self.ax_tot.hist(self.tot_array,
-                                          bins=103,
-                                          range=(0,1030), 
-                                          #density = True,
-                                          histtype='stepfilled', 
+        self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
+                                          weights=self.bin_cnt,
+                                          range=self.bin_range,
+                                          align='left',
+                                          #density = True,# makes y axis to show relative integral values and not absolute ones
+                                          histtype='stepfilled',
+                                          edgecolor='black',
                                           facecolor='g'
                                           )
+
         self.canvas_tot = FigureCanvas(self.figtot)
         self.canvas_tot.set_size_request(500,500)
         self.ax_tot.plot()
+
+# workign part stops here
+
+        ## attempt at blitting 
+
+        # self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
+        #                                   weights=self.bin_cnt,
+        #                                   range=self.bin_range,
+        #                                   align='left',
+        #                                   #density = True,
+        #                                   histtype='stepfilled',
+        #                                   edgecolor='black',
+        #                                   facecolor='g',
+        #                                   animated=True
+        #                                   )
+
+        #self.fig_bgr = self.canvas_tot.copy_from_bbox(self.figtot.bbox)
+        #self.ax_tot.plot()
+        #plt.pause(0.1)
+        #print(type(self.tot_histo))
+        #self.ax_tot.draw_artist(self.tot_histo)
+        #self.canvas_tot.blit(self.figtot.bbox)
 
     def get_tot_val(self):
 
@@ -295,25 +374,57 @@ class TOTplot(object):
     def upd_histo(self):
         
         new_tot = self.get_tot_val()
-        self.tot_array = np.concatenate([self.tot_array, new_tot])
-        print("UI::GUI::PlotWidget::TOTplot: TOT array size: {}, last entries-> {}".format(
-            self.tot_array.shape[0],
-            self.tot_array[len(self.tot_array)-32:len(self.tot_array)])
-        ,flush=True)
 
-        self.tot_histo = self.ax_tot.hist(self.tot_array,
-                                          bins=103,
-                                          range=(0,1030), 
+        i_bin_cnt, _ = np.histogram(new_tot, bins=self.bin_edges)
+        self.bin_cnt += i_bin_cnt
+
+        self.ax_tot.cla()
+        if(len(self.bin_cnt>0) and self.logScale):
+            self.ax_tot.set_yscale('log')
+
+        self.ax_tot.set_xlabel('TOT')
+        self.ax_tot.set_ylabel('Entries')
+        self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
+                                          weights=self.bin_cnt,
+                                          range=self.bin_range,
+                                          align='left',
                                           #density = True,
-                                          histtype='stepfilled', 
+                                          histtype='stepfilled',
+                                          edgecolor='black',
                                           facecolor='g'
                                           )
-        self.canvas_tot.draw()
-        self.localcnt +=1
 
-        if(self.localcnt == 20):
-           np.savetxt("ebala.txt", self.tot_array, delimiter=',')
+        print("UI::GUI::PlotWidget::upd_histo: bin_cnt[0:9]:{}".format(self.bin_cnt[0:9]))
+
+        self.canvas_tot.draw()
+
+#        ##################################################################33
+#
+#        i_bin_cnt, _ = np.histogram(new_tot, bins=self.bin_edges)
+#        self.bin_cnt += i_bin_cnt
+#
+#        for bar, h in zip(self.tot_histo, self.bin_cnt):
+#            bar.set_height(h)
+#
+#        self.canvas_tot.restore_region(self.fig_bgr)
+#        self.ax_tot.draw_artist(self.tot_hist)
+#        self.figtot.canvas.blit(self.figtot.bbox)
+#        self.figtot.canvas.flush_events()
+#
+#        # ----------- my addition -----------
+#        self.fig_bgr = self.canvas_tot.copy_from_bbox(self.figtot.bbox)
+
+
+        #if(self.localcnt == 20):
+        #   np.savetxt("ebala.txt", self.tot_array, delimiter=',')
 
         return True
 
+    def reset_histo(self):
+        
+        self.bin_cnt = np.zeros(self.nbins, dtype=np.int64)
+
+    def setLogScale(self):
+    
+        self.logScale = True
 

@@ -682,7 +682,9 @@ class ScanBase(object):
 
         self.maskfile = kwargs.get('maskfile', None)
         self.thrfile = kwargs.get('thrfile', None)
+        self.automask = kwargs.get('automask', None)
         self.configure(**kwargs)
+        print("[TEST] tpx3::scan_base::start: got \'automask\'={}".format(self.automask))
 
         # Produce needed PCR (Pixel configuration register)
         for i in range(256 // 4):

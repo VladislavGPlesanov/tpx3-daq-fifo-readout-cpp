@@ -364,8 +364,9 @@ class TPX3_data_logger(object):
                             'VTP_coarse', 'VTP_fine', 'Ibias_CP_PLL', 'PLL_Vcntrl',
                             'Equalisation_path', 'Mask_path', 'Run_name', 'Polarity', 'Op_mode', 'Fast_Io_en',
                             'clk_fast_out', 'ClkOut_frequency_src', 'AckCommand_en', 'SelectTP_Ext_Int',
-                            'clkphasediv', 'clkphasenum', 'PLLOutConfig', 'Readout_Speed', 'TP_Period', 
-                            'Sense_DAC','ena_cpp', 'shutter_time']
+                            'clkphasediv', 'clkphasenum', 'PLLOutConfig', 'Readout_Speed', 'TP_Period', 'Sense_DAC',
+                            # addition below
+                            'ena_cpp', 'shutter_time','automask']
         self.data = self.default_config()
 
     def default_config(self):
@@ -414,9 +415,11 @@ class TPX3_data_logger(object):
                 'PLLOutConfig' : 0,
                 'Readout_Speed': 0.1,
                 'TP_Period': 3,
-                'Sense_DAC': 29,#} default ends here
+                'Sense_DAC': 29,
+                #} default ends here, additions onwards
                 'shutter_time': 0.01,
-                'ena_cpp': False} # my crap
+                'ena_cpp': False,
+                'automask':False} 
 
     def is_valid(self, config):
         if not isinstance(config, dict):

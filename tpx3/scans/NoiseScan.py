@@ -46,6 +46,10 @@ class NoiseScan(ScanBase):
         '''
 
         print("tpx3::scans::NoiseScan::scan: using shutter time of {} s".format(shutter))
+        print(type(self.chip.mask_matrix))
+        print(self.chip.mask_matrix.shape)
+        print(self.maskfile)
+        print("[TEST] tpx3::scans::NoiseScan::scan: checking flag \'automask\'={}".format(self.automask))
 
         # Check if parameters are valid before starting the scan
         if Vthreshold_start < 0 or Vthreshold_start > 2911:
@@ -135,6 +139,21 @@ class NoiseScan(ScanBase):
             If there is a status queue information about the status of the scan are put into it
         '''
 
+        # ----------------------------------------------------
+        # this should got to utils
+        #
+        def findNoisyPixels(pixel_array):
+
+            mean_occ = np.mean(pixel_array)
+            stdev_occ = np.std(pixel_array)
+            threshold = mean_occ + stdev_occ*5 #hardcode or user-defined?
+            badpixels = (pixel_array > threshold).astype(int)
+
+            return badpixels
+
+        mask_pixels = None
+
+        # ----------------------------------------------------
         h5_filename = self.output_filename + '.h5'
 
         self.logger.info('Starting data analysis...')
@@ -164,6 +183,10 @@ class NoiseScan(ScanBase):
             h5_file.create_table(h5_file.root.interpreted, 'hit_data', hit_data, filters=tb.Filters(complib='zlib', complevel=5))
             pix_occ = np.bincount(hit_data['x'] * 256 + hit_data['y'], minlength=256 * 256).astype(np.uint32)
             hist_occ = np.reshape(pix_occ, (256, 256)).T
+            # ----------------------------------------------------
+            if(self.automask):
+                mask_pixels = findNoisyPixels(hist_occ)
+            # ----------------------------------------------------
             h5_file.create_carray(h5_file.root.interpreted, name='HistOcc', obj=hist_occ)
             param_range = np.unique(meta_data['scan_param_id'])
             meta_data = None
@@ -178,6 +201,39 @@ class NoiseScan(ScanBase):
             noise_curve_pixel, noise_curve_hits = analysis.noise_pixel_count(hit_data, param_range, Vthreshold_start)
             h5_file.create_carray(h5_file.root.interpreted, name='NoiseCurvePixel', obj=noise_curve_pixel)
             h5_file.create_carray(h5_file.root.interpreted, name='NoiseCurveHits', obj=noise_curve_hits)
+
+
+        tmp_mask_matrix = self.chip.mask_matrix
+        
+        cnt_m, cnt_um = 0, 0
+
+        if(self.automask):
+            print("[TEST] tpx3::scans::NoiseScan: using automask!")
+            # maybe put in dyke skipping as (x > xmin && x < xmax && y > ymin && y < ymax )?: 
+            #dyke_xmin = 3
+            #dyke_xmax = 252
+            #dyke_ymin = 3
+            #dyke_ymax = 252
+
+            try:
+                for x in range(0,256):
+                    for y in range(0,256):
+                        #if(x > dyke_xmin and x < dyke_xmax and y > dyke_ymin and y < dyke_ymax):
+                        if(self.chip.mask_matrix[x,y] != 1 and mask_pixels[x,y] == 1):
+                            #print("tpx3::scans::NoiseScan: masking pixel {},{}".format(x,y))
+                            self.chip.mask_matrix[x,y] = 1
+                            cnt_m+=1
+            
+                        if(self.chip.mask_matrix[x,y] != 0 and mask_pixels[x,y] == 0):
+                            #print("tpx3::scans::NoiseScan: unmasking pixel {},{}".format(x,y))
+                            self.chip.mask_matrix[x,y] = 0
+                            cnt_um+=1
+            except:
+                pass
+                print("Some error")
+            print("masked = {}, unmasked = {}".format(cnt_m, cnt_um))
+            self.save_mask_matrix() 
+        
 
     def plot(self, status = None, plot_queue = None, **kwargs):
         '''

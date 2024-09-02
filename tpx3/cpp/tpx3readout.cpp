@@ -460,7 +460,7 @@ extern "C" {
         PyObject *nd_timeout = PyObject_GetAttrString(self, "no_data_timeout");
         // return zero if object is NULL
         if(nd_timeout==NULL){
-           flush_debug("could not find no_data_timeout!");
+           //flush_debug("could not find no_data_timeout!");
            Py_XDECREF(nd_timeout);
            return 0.0; 
         }  
@@ -817,7 +817,7 @@ extern "C" {
       // importing numpy API functionality
       import_array();
      
-      flush_debug("tpx3::cpp::tpx3redoutcpp: [INFO] starting readout"); 
+      //flush_debug("tpx3::cpp::tpx3redoutcpp: [INFO] starting readout"); 
     
       //if(l_global_start_time == std::chrono::_V2::system_clock::time_point()){
       //  l_global_start_time == tick();
@@ -1049,7 +1049,7 @@ extern "C" {
       append = NULL;
       lastTuple=NULL;
     
-      flush_debug("tpx3::cpp::tpx3readoutcpp:[INFO] - readoutToDeque DONE!"); 
+      //flush_debug("tpx3::cpp::tpx3readoutcpp:[INFO] - readoutToDeque DONE!"); 
     
       // release GIL state
       PyGILState_Release(gstate);   
