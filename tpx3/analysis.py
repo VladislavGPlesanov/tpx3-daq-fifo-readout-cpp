@@ -82,6 +82,7 @@ def noise_pixel_count(hit_data, param_range, Vthreshold_start):
 
 def vths(scurves, param_range, Vthreshold_start):
     vths = np.zeros((256, 256), dtype=np.uint16)
+#    cnt = 0
     for x in range(256):
         for y in range(256):
             sum_of_hits = 0
@@ -91,6 +92,12 @@ def vths(scurves, param_range, Vthreshold_start):
                 weighted_sum_of_hits += scurves[x*256+y, i] * i
             if(sum_of_hits > 0):
                 vths[x, y] = Vthreshold_start + weighted_sum_of_hits / (sum_of_hits * 1.0)
+#           
+#            if(cnt % 5000 == 0):
+#                print("tpx3::analysis::vths: params for pixel [{},{}]".format(x,y))
+#                print("sum of hits = {}, weighted sum = {}".format(sum_of_hits, weighted_sum_of_hits))
+#            cnt+=1 
+#
     return vths
 
 def vth_hist(vths, Vthreshold_stop):
@@ -119,7 +126,9 @@ def eq_matrix(hist_th0, hist_th15, vths_th0, Vthreshold_start, Vthreshold_stop):
     filter_15 = eq_distance <= -8
     matrix[filter_15] = 15
 
-    return matrix.astype(np.uint8)
+    #badPixels = ((matrix > 8) | (matrix < -8)).astype(int)
+
+    return matrix.astype(np.uint8), eq_distance.astype(np.uint8)
 
 def pixeldac_opt(hist_th0, hist_th15, pixeldac, last_pixeldac, last_delta, Vthreshold_start, Vthreshold_stop):
     means = th_means(hist_th0, hist_th15, Vthreshold_start, Vthreshold_stop)
@@ -147,6 +156,9 @@ def th_means(hist_th0, hist_th15, Vthreshold_start, Vthreshold_stop):
         entries_th0 += hist_th0[i] / 100. * i
         sum_th15 += hist_th15[i]
         entries_th15 += hist_th15[i] / 100. * i
+
+    print("tpx3::analysis::th_means: intermediate parameters:")
+    print("\nsum_th0={},\nsum_th15={},\nentries_0={},\nentries_15={}".format(sum_th0,sum_th15,entries_th0,entries_th15))
     mean_th0 = entries_th0 / (sum_th0 / 100.)
     mean_th15 = entries_th15 / (sum_th15 / 100.)
     sum_mean_difference_th0 = 0.
@@ -162,6 +174,8 @@ def th_means(hist_th0, hist_th15, Vthreshold_start, Vthreshold_stop):
     rms_th15 = np.sqrt(var_th15)
     delta = mean_th15 - mean_th0
     rms_delta = 3.3 * rms_th15 + 3.3 * rms_th0
+
+    print("analysis:th_means: calculated \nmu_th0={},\nmu_th15={},\nrms_th0={},\nrms_th15={},\ndelta={},\nrms_delta={}".format(mean_th0,mean_th15,rms_th0,rms_th15, delta,rms_delta))
 
     return (mean_th0, mean_th15, rms_th0, rms_th15, delta, rms_delta)
 
@@ -784,6 +798,8 @@ def fit_scurve(scurve_data, scan_param_range, n_injections, sigma_0, invert_x):
 
         Returns:
             (mu, sigma, chi2/ndf)
+        for now returns:
+            (mu, sigma, chi2/ndf, (initial guess) mu) 
     '''
 
     scurve_data = np.array(scurve_data, dtype=float)
@@ -792,11 +808,14 @@ def fit_scurve(scurve_data, scan_param_range, n_injections, sigma_0, invert_x):
     x = scan_param_range[~np.isnan(scurve_data)]
     y = scurve_data[~np.isnan(scurve_data)]
 
+    #print("tpx3::analysis::fit_curve: x[{}{}]".format(x.shape, len(x)),flush=True)
+    #print("tpx3::analysis::fit_curve: y[{}{}]".format(y.shape, len(y)),flush=True)
+
     # Only fit data that is fittable
     if np.all(y == 0) or np.all(np.isnan(y)) or x.shape[0] < 3:
-        return (0., 0., 0.)
+        return (0., 0., 0., 0.)
     if y.max() < 0.2 * n_injections:
-        return (0., 0., 0.)
+        return (0., 0., 0., 0.)
 
     # Calculate data errors, Binomial errors
     yerr = np.sqrt(y * (1. - y.astype(float) / n_injections))
@@ -829,15 +848,19 @@ def fit_scurve(scurve_data, scan_param_range, n_injections, sigma_0, invert_x):
                              method='lm')[0]
             chi2 = np.sum((y - scurve(x, *popt)) ** 2)
     except RuntimeError:  # fit failed
-        return (0., 0., 0.)
+        return (0., 0., 0., 0.)
 
-    # Treat data that does not follow an S-Curve, every fit result is possible here but not meaningful
+    # Treat data that does not follow an S-Curve, 
+    # every fit result is possible here but not meaningful
     max_threshold = x.max() + 5. * np.abs(popt[2])
     min_threshold = x.min() - 5. * np.abs(popt[2])
     if popt[2] <= 0 or not min_threshold < popt[1] < max_threshold:
-        return (0., 0., 0.)
+        return (0., 0., 0., 0.)
 
-    return (popt[1], popt[2], chi2 / (y.shape[0] - 3 - 1))
+    # note: if one adds parameters in return statement - 
+    # ONE ALSO HAS OT ADJUST RETUN IN EXCEPTION CASES!
+    #return (popt[1], popt[2], chi2 / (y.shape[0] - 3 - 1)) # legacy
+    return (popt[1], popt[2], chi2 / (y.shape[0] - 3 - 1), mu) # mine
 
 
 def imap_bar(func, args, n_processes=None, progress = None):
@@ -893,6 +916,8 @@ def fit_scurves_multithread(scurves, scan_param_range,
     else:
         step_counter = 0
 
+    #cnt = 0 
+    #sigma = None
     for curve in _scurves:
         # Calculate from pixels with valid data (maximum = n_injections)
         if curve.max() == n_injections:
@@ -909,6 +934,10 @@ def fit_scurves_multithread(scurves, scan_param_range,
                               invert_x=invert_x)
             sigmas.append(sigma)
 
+            #sigma = None
+
+        #if(cnt%5000==0):
+        #    print("tpx3::analysis scureve_fit: x={}, y={}, sigmas={}".format(x,y,sigma),flush=True)
         if progress == None:
             pbar.update(1)
         else:
@@ -917,10 +946,14 @@ def fit_scurves_multithread(scurves, scan_param_range,
                 fraction = step_counter / (_scurves.shape[0])
                 progress.put(fraction)
 
+        #cnt+=1        
+
     if progress == None:
         pbar.close()
 
     sigma_0 = np.median(sigmas)
+
+    #print("tpx3::analysis: median sigma is {}".format(sigma_0))
 
     logger.info("Start S-curve fit on %d CPU core(s)", mp.cpu_count())
 
@@ -931,17 +964,21 @@ def fit_scurves_multithread(scurves, scan_param_range,
                                 invert_x=invert_x)
 
     result_list = imap_bar(partialfit_scurve, _scurves.tolist(), progress = progress)
+    print(result_list)
     result_array = np.array(result_list)
     logger.info("S-curve fit finished")
 
     thr = result_array[:, 0]
     sig = result_array[:, 1]
     chi2ndf = result_array[:, 2]
+    mu_guess = result_array[:, 3]
 
     thr2D = np.reshape(thr, (256, 256))
     sig2D = np.reshape(sig, (256, 256))
     chi2ndf2D = np.reshape(chi2ndf, (256, 256))
-    return thr2D, sig2D, chi2ndf2D
+    mu2D = np.reshape(mu_guess, (256, 256))
+    #return thr2D, sig2D, chi2ndf2D # legacy
+    return thr2D, sig2D, chi2ndf2D, mu2D # my addition
 
 
 def fit_ToT(tot_data, scan_param_range, t_est):

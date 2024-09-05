@@ -189,7 +189,8 @@ class ThresholdScan(ScanBase):
 
             # Fit S-Curves to the histograms for all pixels
             param_range = list(range(Vthreshold_start, Vthreshold_stop + 1))
-            thr2D, sig2D, chi2ndf2D = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D, sig2D, chi2ndf2D = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D, sig2D, chi2ndf2D, _ = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
 
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve', obj=scurve)
             h5_file.create_carray(h5_file.root.interpreted, name='Chi2Map', obj=chi2ndf2D.T)

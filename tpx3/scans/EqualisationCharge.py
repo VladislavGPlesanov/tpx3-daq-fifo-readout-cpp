@@ -213,6 +213,12 @@ class EqualisationCharge(ScanBase):
             op_mode = [row[1] for row in general_config if row[0]==b'Op_mode'][0]
             vco = [row[1] for row in general_config if row[0]==b'Fast_Io_en'][0]
 
+            polarity = [row[1] for row in general_config if row[0]==b'Polarity'][0]
+            print("tpx3::scans::EqualisationCharge: Found polarity <{}>".format(polarity))
+            invert_fit = False
+            if(polarity == 1):
+                invert_fit = True
+
             # Create group to save all data and histograms to the HDF file
             h5_file.create_group(h5_file.root, 'interpreted', 'Interpreted Data')
 
@@ -273,24 +279,43 @@ class EqualisationCharge(ScanBase):
 
             # Fit S-Curves to the histograms for all pixels
             self.logger.info('Fit the scurves for all pixels...')
-            thr2D_th0, sig2D_th0, chi2ndf2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D_th0, sig2D_th0, chi2ndf2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D_th0, sig2D_th0, chi2ndf2D_th0, mu2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th0', obj=scurve_th0)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th0', obj=thr2D_th0.T)
+           
+            # my addition 
+            h5_file.create_carray(h5_file.root.interpreted, name='sig2D_th0', obj=sig2D_th0)
+            h5_file.create_carray(h5_file.root.interpreted, name='chi2ndf2D_th0', obj=chi2ndf2D_th0)
+            h5_file.create_carray(h5_file.root.interpreted, name='mu2D_th0', obj=mu2D_th0)
+
             scurve_th0 = None
-            thr2D_th15, sig2D_th15, chi2ndf2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D_th15, sig2D_th15, chi2ndf2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D_th15, sig2D_th15, chi2ndf2D_th15, mu2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th15', obj=scurve_th15)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th15', obj=thr2D_th15.T)
             scurve_th15 = None
+
+            # my addition
+            h5_file.create_carray(h5_file.root.interpreted, name='sig2D_th15', obj=sig2D_th15)
+            h5_file.create_carray(h5_file.root.interpreted, name='chi2ndf2D_th15', obj=chi2ndf2D_th15)
+            h5_file.create_carray(h5_file.root.interpreted, name='mu2D_th15', obj=mu2D_th15)
 
             # Put the threshold distribution based on the fit results in two histograms
             self.logger.info('Get the cumulated global threshold distributions...')
             hist_th0 = analysis.vth_hist(thr2D_th0, Vthreshold_stop)
             hist_th15 = analysis.vth_hist(thr2D_th15, Vthreshold_stop)
+            # my addition here (temp)
+            h5_file.create_carray(h5_file.root.interpreted, name='vth_histTh0', obj=hist_th0)
+            h5_file.create_carray(h5_file.root.interpreted, name='vth_histTh15', obj=hist_th15)
+            # ######
 
             # Use the threshold histograms and one threshold distribution to calculate the equalisation
             self.logger.info('Calculate the equalisation matrix...')
-            eq_matrix = analysis.eq_matrix(hist_th0, hist_th15, thr2D_th0, Vthreshold_start, Vthreshold_stop)
+            #eq_matrix = analysis.eq_matrix(hist_th0, hist_th15, thr2D_th0, Vthreshold_start, Vthreshold_stop)
+            eq_matrix, eq_distance = analysis.eq_matrix(hist_th0, hist_th15, thr2D_th0, Vthreshold_start, Vthreshold_stop)
             h5_file.create_carray(h5_file.root.interpreted, name='EqualisationMap', obj=eq_matrix)
+            h5_file.create_carray(h5_file.root.interpreted, name='EqualisationDistancesMap', obj=eq_distance)
 
         # Don't mask any pixels in the mask file
         mask_matrix = np.zeros((256, 256), dtype=bool)

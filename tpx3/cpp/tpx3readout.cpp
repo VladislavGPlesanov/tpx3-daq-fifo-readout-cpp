@@ -4,6 +4,7 @@
 // Uni-Bonn, Vlad
 // 
 // Description of python object structures and interplay are described in how-to-firmware.html
+// (ask around for this file)
 //
 //
 #define PY_SSIZE_T_CLEAN
@@ -76,52 +77,52 @@ extern "C" {
         std::cout<<msg<<"\n"<<std::flush;
     };
 
-    void dumpVector(std::vector<int> vect){
-        int cnt = 0;
-        for(auto &el: vect){
-            std::cout<<"RX["<<cnt<<"]=["<<el<<"]"<<"\t"<<std::flush;
-            cnt++;
-        }
-    };
+//    void dumpVector(std::vector<int> vect){
+//        int cnt = 0;
+//        for(auto &el: vect){
+//            std::cout<<"RX["<<cnt<<"]=["<<el<<"]"<<"\t"<<std::flush;
+//            cnt++;
+//        }
+//    };
 
-    void printVectUint(std::vector<uint32_t> vect){    
-        
-        int vsize = vect.size();
-        int iter_max = 64;
-        if(vsize<iter_max){
-            iter_max = (int)vsize;
-        }
+//    void printVectUint(std::vector<uint32_t> vect){    
+//        
+//        int vsize = vect.size();
+//        int iter_max = 64;
+//        if(vsize<iter_max){
+//            iter_max = (int)vsize;
+//        }
+//
+//        for(int i = 0; i < iter_max; i++){
+//            std::cout<<vect.at(i)<<"|"<<std::flush;
+//            if(i !=0 && i % 8 == 0){
+//              std::cout<<"\n"<<std::flush;
+//            }
+//        }
+//        int items_left = 0;
+//        if(vsize >= iter_max){
+//            items_left = vsize - iter_max;
+//        }
+//        std::cout<<" and "<<items_left<<" more\n"<<std::flush;
+//    }
 
-        for(int i = 0; i < iter_max; i++){
-            std::cout<<vect.at(i)<<"|"<<std::flush;
-            if(i !=0 && i % 8 == 0){
-              std::cout<<"\n"<<std::flush;
-            }
-        }
-        int items_left = 0;
-        if(vsize >= iter_max){
-            items_left = vsize - iter_max;
-        }
-        std::cout<<" and "<<items_left<<" more\n"<<std::flush;
-    }
+//    void printReverseVectUint(std::vector<uint32_t> vect){    
+//
+//        int vsize = vect.size();
+//        int iter_max = 64;
+//
+//        if(vsize >= iter_max*2){
+//
+//            for(int i = vsize-iter_max; i<vsize; i++){
+//                std::cout<<vect.at(i)<<"|"<<std::flush;
+//                if(i !=vsize-iter_max && i % 8 == 0){
+//                  std::cout<<"\n"<<std::flush;
+//                }
+//            }
+//        }
+//    }
 
-    void printReverseVectUint(std::vector<uint32_t> vect){    
-
-        int vsize = vect.size();
-        int iter_max = 64;
-
-        if(vsize >= iter_max*2){
-
-            for(int i = vsize-iter_max; i<vsize; i++){
-                std::cout<<vect.at(i)<<"|"<<std::flush;
-                if(i !=vsize-iter_max && i % 8 == 0){
-                  std::cout<<"\n"<<std::flush;
-                }
-            }
-        }
-    }
-
-    // NIU but can be used for debug
+    // NIU, but can be used for debuging pyobjects directly or as example
     //
     const char* printObjType(PyObject *obj){ 
 
@@ -197,7 +198,7 @@ extern "C" {
             Py_XDECREF(item);
             item=NULL;
         };
-        // returns sum of counters
+        // return sum of counters
         return n_errors;
     };
 
@@ -234,11 +235,10 @@ extern "C" {
                 PyArray_DATA(reinterpret_cast<PyArrayObject*>(pyarray)));
     
         // copy c++ data into pyarray 
-        std::copy(data.begin(),data.end(),thisData); 
+        //std::copy(data.begin(),data.end(),thisData); 
         // to try:
-        //memcpy(thisData, &data[0], datasize*sizeof(uint32_t)); // this is actually faster..
+        memcpy(thisData, &data[0], datasize*sizeof(uint32_t)); // this is actually faster..
                                                                // but not sure why reads less...
-        // return pyarray
         return pyarray;
     
     };
@@ -303,8 +303,9 @@ extern "C" {
     
     }
     
-    //can be used to set the desired data polling interval wihtin basil.SiTcp._tcp_readout
-    void set_tcp_interval(PyObject *interface, float time){ //used for tcp_interval status
+    //can be used to set the desired data polling interval 
+    //wihtin basil.SiTcp._tcp_readout object
+    void set_tcp_interval(PyObject *interface, float time){ 
     
         PyObject_SetAttrString(interface,
                                "_tcp_readout_interval", 
@@ -312,7 +313,7 @@ extern "C" {
     
     }
    
-    // calls status check and counter check functions in tpx3/fifo_readout.py
+    // calls status/counter check functions in tpx3/fifo_readout.py
     //
     PyObject* readFifoStatus(PyObject *self, const char* option){       
     
@@ -320,7 +321,6 @@ extern "C" {
     // object on the python side should be: <tpx3.fifo_readout.FifoReadout>
     
         PyGILState_STATE gstate = PyGILState_Ensure(); 
-        //std::cout<<"[DEBUG] Checking:"<<option<<"\n"<<std::flush;
         PyObject *status;
     
         /*returns status and counters for FIFO for following options:
@@ -527,7 +527,7 @@ extern "C" {
             flush_debug("[DEBUG] self.stop_readout IS NULL");
             return false;
         }
-        // if at any point if this tree the reference is null - return zero
+        // if at any point if this tree the reference is null - return false
     }
     
     // calls tpx3::fifo_readout::get_data method and returns 
@@ -632,58 +632,58 @@ extern "C" {
     
     };
     
-    // dumps status of status registers of all receivers on tpx3
-    // test function
-    PyObject* getStatusAllRx(PyObject *self, const char* REG){ // this one's not used
-    
-        // Can be used to directly obtain:
-        // [ENABLE, DATA_DELAY, INVERT, SAMPLING_EDGE, READY] register values
-        // of RX channels
-    
-        PyGILState_STATE gstate = PyGILState_Ensure(); 
-        PyObject *chip; // top object reference
-        PyObject *STAT; // statusobject reference
-    
-        std::vector<int> rx_status;
-     
-        chip = PyObject_GetAttrString(self, "chip");
-        if(chip!=NULL){
-            for(int i=0; i<tpx3::NUM_RX_CHAN ; i++){ //TODO: put nr of RX channels in a const file.
-                std::string ithRX = "RX"+std::to_string(i);
-                PyObject *irx = PyObject_GetItem(chip, PyUnicode_FromString(ithRX.c_str()));
-                if(irx != NULL){
-                    STAT = PyObject_GetItem(irx, PyUnicode_FromString(REG));           
-                    if(STAT != NULL){
-                        int status = PyLong_AsLong(STAT);
-                        rx_status.push_back(status); 
-                        Py_DECREF(STAT);
-                        Py_DECREF(irx);
-                    }else{
-                       std::stringstream ss;
-                       ss<<"Pointer to (" << REG << ") is NULL!";
-                       flush_debug(ss.str());
-                       return Py_None;
-                    }
-                }else{
-                   flush_debug(ithRX+" is NULL");
-                   return Py_None;    
-                }
-            }
-        }else{
-            flush_debug("chip is NULL");
-            return Py_None;
-        }
-        std::stringstream stream;
-        stream<<"Dumping "<<REG<<"]:\n";
-        flush_debug(stream.str());
-        dumpVector(rx_status);
-        rx_status.clear();
-    
-        Py_DECREF(chip);
-    
-        PyGILState_Release(gstate); 
-        return Py_None;
-    };
+//    // dumps status of status registers of all receivers on tpx3
+//    // test function
+//    PyObject* getStatusAllRx(PyObject *self, const char* REG){ // this one's not used
+//    
+//        // Can be used to directly obtain:
+//        // [ENABLE, DATA_DELAY, INVERT, SAMPLING_EDGE, READY] register values
+//        // of RX channels
+//    
+//        PyGILState_STATE gstate = PyGILState_Ensure(); 
+//        PyObject *chip; // top object reference
+//        PyObject *STAT; // statusobject reference
+//    
+//        std::vector<int> rx_status;
+//     
+//        chip = PyObject_GetAttrString(self, "chip");
+//        if(chip!=NULL){
+//            for(int i=0; i<tpx3::NUM_RX_CHAN ; i++){ //TODO: put nr of RX channels in a const file.
+//                std::string ithRX = "RX"+std::to_string(i);
+//                PyObject *irx = PyObject_GetItem(chip, PyUnicode_FromString(ithRX.c_str()));
+//                if(irx != NULL){
+//                    STAT = PyObject_GetItem(irx, PyUnicode_FromString(REG));           
+//                    if(STAT != NULL){
+//                        int status = PyLong_AsLong(STAT);
+//                        rx_status.push_back(status); 
+//                        Py_DECREF(STAT);
+//                        Py_DECREF(irx);
+//                    }else{
+//                       std::stringstream ss;
+//                       ss<<"Pointer to (" << REG << ") is NULL!";
+//                       flush_debug(ss.str());
+//                       return Py_None;
+//                    }
+//                }else{
+//                   flush_debug(ithRX+" is NULL");
+//                   return Py_None;    
+//                }
+//            }
+//        }else{
+//            flush_debug("chip is NULL");
+//            return Py_None;
+//        }
+//        std::stringstream stream;
+//        stream<<"Dumping "<<REG<<"]:\n";
+//        flush_debug(stream.str());
+//        dumpVector(rx_status);
+//        rx_status.clear();
+//    
+//        Py_DECREF(chip);
+//    
+//        PyGILState_Release(gstate); 
+//        return Py_None;
+//    };
     
     std::string checkReadStatus(PyObject *self){ // maybe could be used...
         
