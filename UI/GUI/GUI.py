@@ -12,7 +12,7 @@ from matplotlib.backends.backend_gtk3agg import (FigureCanvasGTK3Agg as FigureCa
 import numpy as np
 from multiprocessing import Process, Queue, Pipe
 
-from UI.GUI.PlotWidget import plotwidget, TOTplot
+from UI.GUI.PlotWidget import plotwidget, TOTplot, TOAplot
 from UI.tpx3_logger import file_logger, TPX3_datalogger, mask_logger, equal_logger
 from UI.CLI.tpx3_cli import TPX3_multiprocess_start
 import tpx3.utils as utils
@@ -63,7 +63,7 @@ class GUI_totplot(Gtk.Window):
         
         # ---------- defining actions for GUI_totplot -----------
 
-    def stop_odle_job(self):
+    def stop_idle_job(self):
         GLib.source_remove(self.Tag)
 
     def window_destroy(self, event, widget):
@@ -1749,7 +1749,7 @@ class GUI_Additional_Settings(Gtk.Window):
     def on_cpp_hover(self,button,event):
         if self.hover_timeout_id is not None:
             GLib.source_remove(self.hover_timeout_id)
-        self.hover_timeout_id = GLib.timeout_add(500, self.show_cpp_popover)
+        self.hover_timeout_id = GLib.timeout_add(1000, self.show_cpp_popover)
     def on_cpp_leave(self,button,event):
         if self.hover_timeout_id:
             GLib.source_remove(self.hover_timeout_id)
@@ -3081,10 +3081,10 @@ class GUI_Main(Gtk.Window):
         Space = Gtk.Label()
         Space.set_text('')
 
-        self.PixelDACbutton = Gtk.Button(label = 'PixelDAC')
+        self.PixelDACbutton = Gtk.Button(label = 'Optimize PixelDAC')
         self.PixelDACbutton.connect('clicked', self.on_PixelDACbutton_clicked)
 
-        self.Equalbutton = Gtk.Button(label = 'Equalisation')
+        self.Equalbutton = Gtk.Button(label = 'THL Equalisation')
         self.Equalbutton.connect('clicked', self.on_Equalbutton_clicked)
 
         self.TOTCalibbutton = Gtk.Button(label = 'TOT Calibration')
@@ -3264,18 +3264,9 @@ class GUI_Main(Gtk.Window):
             if status in [1, 3, 5, 7]:
                 self.link_status_label[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
                 self.link_status_label[link_number].override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,0.7,0,1))
-                #########################################
-                #self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
-                #this_label = self.link_status_button[link_number].get_child()
-                #this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,1,0,1))
-                #this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,0.7,0,1))
             else:
                 self.link_status_label[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
                 self.link_status_label[link_number].override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.7,0,0,1))
-               #################################
-                #self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
-                #this_label = self.link_status_button[link_number].get_child()
-                #this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.7,0,0,1))
 
         # with a refresh button
         self.reload_status = Gtk.Button(label='Update')
@@ -3296,14 +3287,18 @@ class GUI_Main(Gtk.Window):
         # adding testplot        
 
         self.totplot_widget = TOTplot(data_queue = self.data_queue)
+        # testing TOA testplot
+        self.toaplot_widget = TOAplot(data_queue = self.data_queue)
 
         # packing buttons below
         #self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
         self.page2.pack_start(self.totplot_widget.canvas_tot, True, False, 0)
-        self.page2.pack_start(self.page2.space, True, False, 0)
+        self.page2.pack_start(self.toaplot_widget.canvas_toa, True, False, 0)
+        #self.page2.pack_start(self.page2.space, True, False, 0)
         self.page2.pack_start(self.page2.space1, True, False, 0)
 
         self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
+        self.Tag4 = GLib.timeout_add(250, self.toaplot_widget.upd_histo)
         self.Tag2 = GLib.timeout_add(500, self.plotwidget.update_plot)
         #                             ^ calls plotwidget every 500 ms
 
@@ -3328,12 +3323,15 @@ class GUI_Main(Gtk.Window):
             if index == 1:
                 self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
                 self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
+                self.Tag4 = GLib.timeout_add(250, self.toaplot_widget.upd_histo)
                 self.start_converter()
             elif index == 0:
                 GLib.source_remove(self.Tag2)
                 GLib.source_remove(self.Tag3)
+                GLib.source_remove(self.Tag4)
                 self.terminate_converter()
                 self.totplot_widget.reset_histo()
+                self.toaplot_widget.reset_histo()
 
     ####################################################################################################
     ### Functions Page 1
@@ -3827,6 +3825,7 @@ class GUI_Main(Gtk.Window):
         elif self.on_notebook_page == 1:
             GLib.source_remove(self.Tag2)
             GLib.source_remove(self.Tag3)
+            GLib.source_remove(self.Tag4)
         if self.converter_process == None:
             return
         self.pipe_source_conn.send(False)
@@ -3850,6 +3849,7 @@ class GUI_Main(Gtk.Window):
         elif self.on_notebook_page == 1:
             self.Tag2 = GLib.timeout_add(250, self.plotwidget.update_plot)
             self.Tag3 = GLib.timeout_add(500, self.totplot_widget.upd_histo)
+            self.Tag4 = GLib.timeout_add(500, self.toaplot_widget.upd_histo)
         else:
             self.terminate_converter()
 

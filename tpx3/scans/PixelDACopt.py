@@ -44,6 +44,7 @@ class IterationTable(tb.IsDescription):
 
 class PixelDACopt(ScanBase):
 
+    print("tpx3::PixelDACopt: Class PixelDACopt")
     scan_id = "PixelDACopt"
     wafer_number = 0
     y_position = 0
@@ -57,6 +58,7 @@ class PixelDACopt(ScanBase):
             If there is a status queue information about the status of the scan are put into it
         '''
 
+        print("tpx3::PixelDACopt::scan: beginning")
         # Check if parameters are valid before starting the scan
         if Vthreshold_start < 0 or Vthreshold_start > 2911:
             raise ValueError("Value {} for Vthreshold_start is not in the allowed range (0-2911)".format(Vthreshold_start))
@@ -80,10 +82,15 @@ class PixelDACopt(ScanBase):
         mask_cmds = self.create_scan_masks(16, pixel_threhsold = 0, number = 1, append_datadriven = False, progress = progress)
         mask_cmds2 = self.create_scan_masks(16, pixel_threhsold = 15, number = 1, append_datadriven = False, progress = progress)
 
+        print("tpx3::PixelDACopt::scan: created masks")
+        print(f"tpx3::PixelDACopt::scan:[{iteration}] last_delta={last_delta}, last_rms_delta={last_rms_delta}, pixeldac={pixeldac}")
         # Repeat until optimization is done
         while last_delta < last_rms_delta - 2 or last_delta > last_rms_delta + 2:
             if status != None:
                 status.put("Linear regression step number {} with pixeldac {}".format(iteration + 1, int(pixeldac)))
+                self.logger.info("Linear regression step number {} with pixeldac {}".format(iteration + 1, int(pixeldac)))
+
+            print(f"tpx3::PixelDACopt::scan: INSIDE while LOOP [{iteration}] last_delta={last_delta}, last_rms_delta={last_rms_delta}, pixeldac={pixeldac}")          
 
             # Create argument list for the current iteration step
             args = {
@@ -102,22 +109,29 @@ class PixelDACopt(ScanBase):
             # In the 0th iteration all files and tables are already created by the start() function of scan_base
             # In further iterations this is not the case so its triggered by the following commands
             if iteration != 0:
+                print("tpx3::PixelDACopt::scan: iteration !=0")
                 self.setup_files(iteration = iteration)
                 self.dump_configuration(iteration = iteration, **args)
 
             # Start the scan for the current iteration
+            print("tpx3::PixelDACopt::scan: starting iteration scan")
             self.scan_iteration(progress = progress, status = status, **args)
 
             # Analyse the data of the current iteration
+            print("tpx3::PixelDACopt::scan: staring analysis")
             opt_results = self.analyze_iteration(iteration, progress = progress, status = status)
+            print("tpx3::PixelDACopt::scan: analysis results: {}".format(opt_results))
             last_pixeldac = pixeldac
+            self.logger.info("Iteration [{}] analysis yields: {}".format(iteration, opt_results))
 
             # Store results of iteration
             pixeldac = opt_results[0]
             last_delta = opt_results[1]
             last_rms_delta = opt_results[2]
 
-            iteration += 1
+            print(f"tpx3::PixelDACopt::scan:[{iteration}] RESULTING parameters: last_delta={last_delta}, last_rms_delta={last_rms_delta}, pixeldac={pixeldac}")
+            iteration += 1            
+            print("tpx3::PixelDACopt::scan: incremeted iteration, should start new iteration")
 
         # Write number of iterations to HDF file
         h5_filename = self.output_filename + '.h5'
@@ -290,6 +304,7 @@ class PixelDACopt(ScanBase):
             status.put("Performing data analysis")
 
         # Open the HDF5 which contains all data of the optimization iteration
+        print("tpx3::PixelDACopt::analyze_iteration: opening file")
         with tb.open_file(h5_filename, 'r+') as h5_file:
             # Read raw data, meta data and configuration parameters for the current iteration
             meta_data_call = ('h5_file.root.' + 'meta_data_' + str(iteration) + '[:]')
@@ -303,6 +318,7 @@ class PixelDACopt(ScanBase):
             if iteration == 0:
                 # Create group to save all data and histograms to the HDF file
                 h5_file.create_group(h5_file.root, 'interpreted', 'Interpreted Data')
+                print("tpx3::PixelDACopt::analyze_iteration: set iteration to 0")
 
             self.logger.info('Interpret raw data...')
 
@@ -341,6 +357,13 @@ class PixelDACopt(ScanBase):
             pixeldac = [int(item[1]) for item in run_config if item[0] == b'pixeldac'][0]
             last_pixeldac = [int(item[1]) for item in run_config if item[0] == b'last_pixeldac'][0]
             last_delta = [float(item[1]) for item in run_config if item[0] == b'last_delta'][0]
+            # using polarity-based fit inversion
+            polarity = [row[1] for row in general_config if row[0]==b'Polarity'][0]
+            print("tpx3::scans::EqualisationCharge: Found polarity <{}>".format(polarity))
+            invert_fit = False
+            if(polarity == 1):
+                invert_fit = True
+
 
             # Select only data which is hit data
             hit_data_thr0 = hit_data_thr0[hit_data_thr0['data_header'] == 1]
@@ -361,14 +384,20 @@ class PixelDACopt(ScanBase):
 
             # Fit S-Curves to the histograms for all pixels
             self.logger.info('Fit the scurves for all pixels...')
-            thr2D_th0, _, _ = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D_th0, _, _ = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D_th0, _, _, _ = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D_th0, _, _, _ = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th0_' + str(iteration), obj=scurve_th0)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th0_' + str(iteration), obj=thr2D_th0.T)
             scurve_th0 = None
-            thr2D_th15, _, _ = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            print("tpx3::PixelDACopt::analyze_iteration: Found s-curves for THR=0")
+
+            #thr2D_th15, _, _ = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D_th15, _, _, _ = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th15_' + str(iteration), obj=scurve_th15)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th15_' + str(iteration) , obj=thr2D_th15.T)
             scurve_th15 = None
+            print("tpx3::PixelDACopt::analyze_iteration: Found s-curves for THR=15")
 
         # Put the threshold distribution based on the fit results in two histograms
         self.logger.info('Get the cumulated global threshold distributions...')
@@ -376,12 +405,14 @@ class PixelDACopt(ScanBase):
         thr2D_th0 = None
         hist_th15 = analysis.vth_hist(thr2D_th15, Vthreshold_stop)
         thr2D_th15 = None
+        print("tpx3::PixelDACopt::analyze_iteration: Made histograms of thresholds")
 
         # Use the threshold histograms to calculate the new Ibias_PixelDAC setting
         self.logger.info('Calculate new pixelDAC value...')
         pixeldac_result = analysis.pixeldac_opt(hist_th0, hist_th15, pixeldac, last_pixeldac, last_delta, Vthreshold_start, Vthreshold_stop)
         delta = pixeldac_result[1]
         rms_delta = pixeldac_result[2]
+        print("tpx3::PixelDACopt::analyze_iteration: analysis results: {}".format(pixeldac_result))
 
         self.logger.info('Result of iteration: Scan with pixeldac %i - New pixeldac %i. Delta was %f with optimal delta %f' % (int(pixeldac), int(pixeldac_result[0]), pixeldac_result[1], pixeldac_result[2]))
         return pixeldac_result

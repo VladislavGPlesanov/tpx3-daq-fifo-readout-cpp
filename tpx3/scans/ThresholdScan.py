@@ -94,8 +94,13 @@ class ThresholdScan(ScanBase):
             # Initialize counter for progress
             step_counter = 0
 
+        #n_thresholds = np.floor(len(thresholds))
+        
+        #n_skip = n_thresholds/10
+
         scan_param_id = 0
         for threshold in thresholds:
+
             # Set the threshold
             self.chip.set_dac("Vthreshold_coarse", int(threshold[0]))
             self.chip.set_dac("Vthreshold_fine", int(threshold[1]))

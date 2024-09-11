@@ -11,10 +11,12 @@ from zmq.utils import jsonapi
 
 import tpx3.analysis as analysis
 from numba.tests.npyufunc.test_ufunc import dtype
+from basil.utils.BitLogic import BitLogic    
 
 logger = logging.getLogger('Online_Interpreter')
 
 _lfsr_10_lut = np.zeros((2 ** 10), dtype=np.uint16)
+_gray_14_lut = np.zeros((2 ** 14), dtype=np.uint16)
 
 def init_lfsr_10_lut():
     """
@@ -31,18 +33,42 @@ def init_lfsr_10_lut():
 
 init_lfsr_10_lut()
 
+# -----------------------------------------------
+# tryna; add grey lfsr for TOA output
+def init_gray_14_lut():
+    """
+    Generates a 14bit gray according to Manual v1.9 page 19
+    """
+    for j in range(2**14):
+        encoded_value = BitLogic(14) #48
+        encoded_value[13:0]=j #47
+        gray_decrypt_v = BitLogic(14) #48
+        gray_decrypt_v[13]=encoded_value[13] #47
+        for i in range (12, -1, -1): #46
+            gray_decrypt_v[i]=gray_decrypt_v[i+1]^encoded_value[i]
+        _gray_14_lut[j] = gray_decrypt_v.tovalue()
+
+init_gray_14_lut()
+
+# --------------------------------------------
+
 def _interpret_raw_data(data):
     pixel = np.uint32(data >> np.uint32(28)) & np.uint32(0b111)
     super_pixel = np.uint32(data >> np.uint32(31)) & np.uint32(0x3f)
     right_col = pixel > 3
     eoc = np.uint32(data >> np.uint32(37)) & np.uint32(0x7f)
 
+    # this one optimized only for TOT/TOA - in other two modes sucks ass...
     header = (data >> np.uint32(47))
     x = (eoc * 2 + right_col * 1)
     y = ((super_pixel * 4) + (pixel - right_col * 4))
     tot = _lfsr_10_lut[(data >> np.uint32(4)) & np.uint32(0x3ff)]
+    # adding toa as test
+    #toa = _gray_14_lut[(data >> np.uint(14)) & np.uint64(0xefff)] # index out of bounds 
+    toa = _gray_14_lut[data >> np.uint(14) & np.uint64(0xfff)]
 
-    return header, x, y, tot
+    #return header, x, y, tot
+    return header, x, y, tot, toa
 
 def raw_data_to_dut(raw_data):
     '''
@@ -78,9 +104,11 @@ def interpret_raw_data(raw_data):
     Chunk the data based on scan_param and interpret
     '''
     data_words = raw_data_to_dut(raw_data)
-    header, x, y, tot = _interpret_raw_data(data_words)
+    #header, x, y, tot = _interpret_raw_data(data_words)
+    header, x, y, tot, toa = _interpret_raw_data(data_words)
 
-    return header, x, y, tot
+    return header, x, y, tot, toa
+    #return header, x, y, tot
 
 class Tpx3(Transceiver):
     def setup_interpretation(self):
@@ -160,12 +188,14 @@ class Tpx3(Transceiver):
         if isinstance(data[0][1], dict):  # Meta data
             return self._interpret_meta_data(data)
 
-        header, x, y, tot = interpret_raw_data(data[0][1])
+        #header, x, y, tot = interpret_raw_data(data[0][1])
+        header, x, y, tot, toa = interpret_raw_data(data[0][1])
 
         x = x[header == 1]
         y = y[header == 1]
         tot = tot[header == 1]
-        hits = x, y, tot
+        toa = toa[header == 1]
+        hits = x, y, tot, toa
 
         self.total_hits += len(header == 1)
         self.readout += 1

@@ -83,7 +83,8 @@ class plotwidget(object):
         t = np.empty(0, np.uint16)
 
         if not self.data_queue.empty():
-            x_new, y_new, t_new = self.data_queue.get()
+            #x_new, y_new, t_new = self.data_queue.get()
+            x_new, y_new, t_new, _ = self.data_queue.get()
             x = np.append(x, x_new)
             y = np.append(y, y_new)
             t = np.append(t, t_new)
@@ -308,7 +309,6 @@ class TOTplot(object):
     def __init__(self, data_queue):
         
         # adding another subplot
-        #self.localcnt = 0
         self.figtot = Figure(figsize=(5,5),dpi=100)
         self.ax_tot = self.figtot.add_subplot(111)
         #self.figtot.subplots_adjust(left = 0.2, top = 0.9)
@@ -324,7 +324,7 @@ class TOTplot(object):
         self.logScale = False
         ###################################
 
-        print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
+        #print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
 
         # some test plot here
         self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
@@ -341,34 +341,13 @@ class TOTplot(object):
         self.canvas_tot.set_size_request(500,500)
         self.ax_tot.plot()
 
-# workign part stops here
-
-        ## attempt at blitting 
-
-        # self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
-        #                                   weights=self.bin_cnt,
-        #                                   range=self.bin_range,
-        #                                   align='left',
-        #                                   #density = True,
-        #                                   histtype='stepfilled',
-        #                                   edgecolor='black',
-        #                                   facecolor='g',
-        #                                   animated=True
-        #                                   )
-
-        #self.fig_bgr = self.canvas_tot.copy_from_bbox(self.figtot.bbox)
-        #self.ax_tot.plot()
-        #plt.pause(0.1)
-        #print(type(self.tot_histo))
-        #self.ax_tot.draw_artist(self.tot_histo)
-        #self.canvas_tot.blit(self.figtot.bbox)
-
     def get_tot_val(self):
 
         tot_val = np.empty(0,np.uint16)
 
         if not self.data_queue.empty():
-            _,_,tot_val = self.data_queue.get()
+            #_,_,tot_val = self.data_queue.get()
+            _,_,tot_val, _ = self.data_queue.get()
         return tot_val
 
     def upd_histo(self):
@@ -394,29 +373,9 @@ class TOTplot(object):
                                           facecolor='g'
                                           )
 
-        print("UI::GUI::PlotWidget::upd_histo: bin_cnt[0:9]:{}".format(self.bin_cnt[0:9]))
+        #print("UI::GUI::PlotWidget::upd_histo: bin_cnt[0:9]:{}".format(self.bin_cnt[0:9]))
 
         self.canvas_tot.draw()
-
-#        ##################################################################33
-#
-#        i_bin_cnt, _ = np.histogram(new_tot, bins=self.bin_edges)
-#        self.bin_cnt += i_bin_cnt
-#
-#        for bar, h in zip(self.tot_histo, self.bin_cnt):
-#            bar.set_height(h)
-#
-#        self.canvas_tot.restore_region(self.fig_bgr)
-#        self.ax_tot.draw_artist(self.tot_hist)
-#        self.figtot.canvas.blit(self.figtot.bbox)
-#        self.figtot.canvas.flush_events()
-#
-#        # ----------- my addition -----------
-#        self.fig_bgr = self.canvas_tot.copy_from_bbox(self.figtot.bbox)
-
-
-        #if(self.localcnt == 20):
-        #   np.savetxt("ebala.txt", self.tot_array, delimiter=',')
 
         return True
 
@@ -427,4 +386,89 @@ class TOTplot(object):
     def setLogScale(self):
     
         self.logScale = True
+
+class TOAplot(object):
+    def __init__(self, data_queue):
+        
+        # adding another subplot
+        #self.localcnt = 0
+        self.figtoa = Figure(figsize=(5,5),dpi=100)
+        self.ax_toa = self.figtoa.add_subplot(111)
+        #self.figtoa.subplots_adjust(left = 0.2, top = 0.9)
+        self.ax_toa.set_xlabel('TOA')
+        self.ax_toa.set_ylabel('Entries')
+        self.data_queue = data_queue
+        # histo parameters
+        self.nbins = 164
+        self.bin_range = (0,16400)
+        self.bin_edges = np.linspace(self.bin_range[0],self.bin_range[1],self.nbins+1)
+        self.bin_cnt = np.zeros(self.nbins, dtype=np.int64)
+        # other params
+        self.logScale = False
+        ###################################
+
+        #print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
+
+        # some test plot here
+        self.toa_histo = self.ax_toa.hist(self.bin_edges[:-1],
+                                          weights=self.bin_cnt,
+                                          range=self.bin_range,
+                                          align='left',
+                                          #density = True,# makes y axis to show relative integral values and not absolute ones
+                                          #histtype='stepfilled',
+                                          histtype='step',
+                                          edgecolor='green'
+                                          #facecolor='g' # need if using 'stepfilled' type
+                                          )
+
+        self.canvas_toa = FigureCanvas(self.figtoa)
+        self.canvas_toa.set_size_request(500,500)
+        self.ax_toa.plot()
+
+    def get_toa_val(self):
+
+        toa_val = np.empty(0,np.uint16)
+
+        if not self.data_queue.empty():
+            _, _, _, toa_val = self.data_queue.get()
+            #print(f" got TOA={toa_val} from queue!")
+        return toa_val
+
+    def upd_histo(self):
+        
+        new_toa = self.get_toa_val()
+
+        i_bin_cnt, _ = np.histogram(new_toa, bins=self.bin_edges)
+        self.bin_cnt += i_bin_cnt
+
+        self.ax_toa.cla()
+        if(len(self.bin_cnt>0) and self.logScale):
+            self.ax_toa.set_yscale('log')
+
+        self.ax_toa.set_xlabel('TOA')
+        self.ax_toa.set_ylabel('Entries')
+        self.toa_histo = self.ax_toa.hist(self.bin_edges[:-1],
+                                          weights=self.bin_cnt,
+                                          range=self.bin_range,
+                                          align='left',
+                                          #density = True,
+                                          histtype='step',
+                                          edgecolor='blue'
+                                          #facecolor='g'
+                                          )
+
+        #print("UI::GUI::PlotWidget::upd_histo: bin_cnt[0:9]:{}".format(self.bin_cnt[0:9]))
+
+        self.canvas_toa.draw()
+
+        return True
+
+    def reset_histo(self):
+        
+        self.bin_cnt = np.zeros(self.nbins, dtype=np.int64)
+
+    def setLogScale(self):
+    
+        self.logScale = True
+
 

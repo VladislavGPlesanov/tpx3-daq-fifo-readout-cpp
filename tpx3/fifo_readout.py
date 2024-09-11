@@ -171,12 +171,12 @@ class FifoReadout(object):
             self.worker_thread.start()
         # if flag set - using cpp readout else use legacy python routine
         if self.ena_cpp:
-            print("tpx3::fifo_readout::start: USING [CPP] readout")
+            #print("tpx3::fifo_readout::start: USING [CPP] readout")
             self.readout_thread = Thread(target=self.cpp_readout, name='CppReadoutThread', kwargs={'no_data_timeout': no_data_timeout})       
             self.readout_thread.daemon = True
             self.readout_thread.start()
         else:
-            print("tpx3::fifo_readout::start: USING [PY] readout")
+            #print("tpx3::fifo_readout::start: USING [PY] readout")
             self.readout_thread = Thread(target=self.readout, name='ReadoutThread', kwargs={'no_data_timeout': no_data_timeout})
             self.readout_thread.daemon = True
             self.readout_thread.start()
@@ -253,7 +253,7 @@ class FifoReadout(object):
         '''
             Readout thread continuously reading FIFO. Uses read_data() and appends data to self._data_deque (collection.deque).
         '''
-        print("[TEST] using [PY] readout")
+        #print("[TEST] using [PY] readout")
         self.logger.debug('Starting %s', self.readout_thread.name)
         curr_time = self.get_float_time()
         time_wait = 0.0
