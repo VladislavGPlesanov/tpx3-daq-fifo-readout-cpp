@@ -32,16 +32,17 @@ conda update --yes conda
 conda install --yes numpy bitarray pytest pytest-cov pyyaml scipy numba pytables pyqt matplotlib tqdm pyzmq blosc psutil setuptools
 ```
 - Instaling the rest of dependencies. 
+
 Basil backend:
 ```bash
 pip install basil_daq==3.2.0
 ```
-and GUI:
+GUI:
 ```bash
 pip install pycairo
 pip install PyGObject
 ```
- - Finally, clone the repository nad install it
+ - Finally, clone the repository and install it
 ```bash
 mkdir tpx3-daq
 git clone https://github.com/SiLab-Bonn/tpx3-daq.git tpx3-daq/
@@ -53,13 +54,6 @@ In case the installation of `pycairo` fails, then try to additionally install
 sudo apt-get install libcairo2-dev libjpeg-dev libgif-dev
 ```
 and rerun `pip install pycairo`
-
-<!--- Install dependencies and tpx3-daq:
-```
-conda install numpy bitarray pyyaml scipy numba pytables matplotlib tqdm pyzmq blosc psutil
-pip install git+https://github.com/SiLab-Bonn/tpx3-daq.git@master
-```
--->
 
 ### Usage
 
@@ -75,6 +69,7 @@ tpx3 tune_noise
 ```bash
 tpx3_gui
 ```
+Basic explanation of GUI operation, scans, and readout settings can be found on [readthedocs](https://tpx3-daq.readthedocs.io/en/latest/scans.html)
 - For help, run (TBD):
 ```
 tpx3 --help

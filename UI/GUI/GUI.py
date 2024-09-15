@@ -2067,6 +2067,7 @@ class GUI_Equalisation(Gtk.Window):
                                                                 n_injections = 100,
                                                                 mask_step = self.Number_of_Iterations,
                                                                 maskfile = TPX3_datalogger.read_value(name = 'Mask_path'),
+                                                                automask = TPX3_datalogger.read_value(name = 'automask'), # enablin' automask
                                                                 ena_cpp = TPX3_datalogger.read_value(name = 'ena_cpp'), # enablin' cpp readout
                                                                 tp_period = TPX3_datalogger.read_value(name = 'TP_Period'),
                                                                 progress = GUI.get_progress_value_queue(),

@@ -329,7 +329,8 @@ class TOTplot(object):
         # some test plot here
         self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
                                           weights=self.bin_cnt,
-                                          range=self.bin_range,
+                                          #range=self.bin_range,
+                                          bins=self.nbins,
                                           align='left',
                                           #density = True,# makes y axis to show relative integral values and not absolute ones
                                           histtype='stepfilled',
@@ -365,7 +366,8 @@ class TOTplot(object):
         self.ax_tot.set_ylabel('Entries')
         self.tot_histo = self.ax_tot.hist(self.bin_edges[:-1],
                                           weights=self.bin_cnt,
-                                          range=self.bin_range,
+                                          bins=self.nbins,
+                                          #range=self.bin_range,
                                           align='left',
                                           #density = True,
                                           histtype='stepfilled',
@@ -394,7 +396,6 @@ class TOAplot(object):
         #self.localcnt = 0
         self.figtoa = Figure(figsize=(5,5),dpi=100)
         self.ax_toa = self.figtoa.add_subplot(111)
-        #self.figtoa.subplots_adjust(left = 0.2, top = 0.9)
         self.ax_toa.set_xlabel('TOA')
         self.ax_toa.set_ylabel('Entries')
         self.data_queue = data_queue
@@ -406,13 +407,11 @@ class TOAplot(object):
         # other params
         self.logScale = False
         ###################################
-
-        #print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
-
         # some test plot here
         self.toa_histo = self.ax_toa.hist(self.bin_edges[:-1],
                                           weights=self.bin_cnt,
-                                          range=self.bin_range,
+                                          #range=self.bin_range,
+                                          bins=self.nbins,
                                           align='left',
                                           #density = True,# makes y axis to show relative integral values and not absolute ones
                                           #histtype='stepfilled',
@@ -449,12 +448,13 @@ class TOAplot(object):
         self.ax_toa.set_ylabel('Entries')
         self.toa_histo = self.ax_toa.hist(self.bin_edges[:-1],
                                           weights=self.bin_cnt,
-                                          range=self.bin_range,
+                                          bins=self.nbins,
+                                          #range=self.bin_range,
                                           align='left',
                                           #density = True,
-                                          histtype='step',
-                                          edgecolor='blue'
-                                          #facecolor='g'
+                                          histtype='stepfilled',
+                                          edgecolor='black',
+                                          facecolor='b'
                                           )
 
         #print("UI::GUI::PlotWidget::upd_histo: bin_cnt[0:9]:{}".format(self.bin_cnt[0:9]))

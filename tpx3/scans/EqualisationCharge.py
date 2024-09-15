@@ -62,6 +62,7 @@ class EqualisationCharge(ScanBase):
         if mask_step not in {4, 16, 64, 256}:
             raise ValueError("Value {} for mask_step is not in the allowed range (4, 16, 64, 256)".format(mask_step))
 
+        print("[TEST] tpx3::scans::NoiseScan::scan: checking flag \'automask\'={}".format(self.automask))
         # Set general configuration registers of the Timepix3
         self.chip.write_general_config()
 
@@ -281,6 +282,7 @@ class EqualisationCharge(ScanBase):
             self.logger.info('Fit the scurves for all pixels...')
             #thr2D_th0, sig2D_th0, chi2ndf2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
             thr2D_th0, sig2D_th0, chi2ndf2D_th0, mu2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
+            #thr2D_th0, sig2D_th0, chi2ndf2D_th0, mu2D_th0 = analysis.fit_scurves_multithread(scurve_th0, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th0', obj=scurve_th0)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th0', obj=thr2D_th0.T)
            
@@ -292,6 +294,7 @@ class EqualisationCharge(ScanBase):
             scurve_th0 = None
             #thr2D_th15, sig2D_th15, chi2ndf2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
             thr2D_th15, sig2D_th15, chi2ndf2D_th15, mu2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=invert_fit, progress = progress)
+            #thr2D_th15, sig2D_th15, chi2ndf2D_th15, mu2D_th15 = analysis.fit_scurves_multithread(scurve_th15, scan_param_range=list(range(Vthreshold_start, Vthreshold_stop + 1)), n_injections=n_injections, invert_x=True, progress = progress)
             h5_file.create_carray(h5_file.root.interpreted, name='HistSCurve_th15', obj=scurve_th15)
             h5_file.create_carray(h5_file.root.interpreted, name='ThresholdMap_th15', obj=thr2D_th15.T)
             scurve_th15 = None
@@ -317,9 +320,40 @@ class EqualisationCharge(ScanBase):
             h5_file.create_carray(h5_file.root.interpreted, name='EqualisationMap', obj=eq_matrix)
             h5_file.create_carray(h5_file.root.interpreted, name='EqualisationDistancesMap', obj=eq_distance)
 
+        n_masked = 0 
+        n_unmasked = 0
+
+        if(self.automask):
+
+            badPixels = ((eq_distance > 8) | (eq_distance < -8)).astype(np.uint8)
+    
+            try:
+    
+                for x in range(256):
+                    for y in range(256):
+                        if(self.chip.mask_matrix[x,y]!=1 and badPixels[x,y] == 1):
+                            self.chip.mask_matrix[x,y]=1
+                            n_masked+=1
+
+                        if(self.chip.mask_matrix[x,y] != 0 and mask_pixels[x,y] == 0):
+                            #print("tpx3::scans::NoiseScan: unmasking pixel {},{}".format(x,y))
+                            self.chip.mask_matrix[x,y] = 0
+                            n_unmasked+=1
+
+            except:
+                print("tpx3::EqualisationCharge:anaysis: Failed to mask chip matrix channels")
+    
+            if(n_masked > 0):
+                print(f"tpx3::EqualisationCharge::analysis: found {n_masked} channels with equalisation distance above 16")
+ 
+            print("masked = {}, unmasked = {}".format(cnt_m, cnt_um))
+            self.save_mask_matrix() 
+       
+        else:
+
         # Don't mask any pixels in the mask file
-        mask_matrix = np.zeros((256, 256), dtype=bool)
-        mask_matrix[:, :] = 0
+            mask_matrix = np.zeros((256, 256), dtype=bool)
+            mask_matrix[:, :] = 0
 
         # Write the equalisation matrix to a new HDF5 file
         self.save_thr_mask(eq_matrix, chip_wafer, chip_x ,chip_y)
