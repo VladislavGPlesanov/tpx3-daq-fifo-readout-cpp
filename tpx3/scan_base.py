@@ -118,6 +118,7 @@ class ScanBase(object):
             if self.test_links() == True:
                self.logger.info("Validity check of link configuration successful")
             else:
+               status.put('Link validity check has failed! Redo \"Initialize Hardware\" scan')
                self.logger.info("Validity check of link configuration failed")
                raise ConfigError("Link configuration is not valid for current setup")
 
@@ -635,7 +636,8 @@ class ScanBase(object):
 
         print("[DEBUG] scan_base::start: ena_cpp={}, readout_interval={}".format(ena_cpp, readout_interval))
         # Initialize the communication with the chip and read the board name and firmware version
-        self.fifo_readout = FifoReadout(chip = self.chip, readout_interval = readout_interval, moving_average_time_period = moving_average_time_period, ena_cpp = ena_cpp)
+        #self.fifo_readout = FifoReadout(chip = self.chip, readout_interval = readout_interval, moving_average_time_period = moving_average_time_period, ena_cpp = ena_cpp)
+        self.fifo_readout = FifoReadout(chip = self.chip, readout_interval = readout_interval, moving_average_time_period = moving_average_time_period, ena_cpp = ena_cpp, status=status)
         self.board_name = self.chip.board_version
         self.firmware_version = self.chip.fw_version
         print("[DEBUG] scan_base::start: after start - ena_cpp={}, readout_interval={}".format(ena_cpp,readout_interval))
@@ -792,6 +794,7 @@ class ScanBase(object):
         time.sleep(0.02)  # sleep here for a while
         self.fifo_readout.start(reset_sram_fifo=reset_sram_fifo, fill_buffer=fill_buffer, clear_buffer=clear_buffer,
                                 callback=callback, errback=errback, no_data_timeout=no_data_timeout)
+
 
     def handle_data(self, data_tuple):
         '''

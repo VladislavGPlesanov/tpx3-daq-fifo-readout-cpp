@@ -87,6 +87,7 @@ class NoiseScan(ScanBase):
         if status != None:
             status.put("iteration_symbol")
         thresholds = utils.create_threshold_list(utils.get_coarse_jumps(Vthreshold_start, Vthreshold_stop))
+        status.put(" ")
 
         if progress == None:
             # Initialize progress bar
@@ -100,6 +101,9 @@ class NoiseScan(ScanBase):
             # Set the threshold
             self.chip.set_dac("Vthreshold_coarse", int(threshold[0]))
             self.chip.set_dac("Vthreshold_fine", int(threshold[1]))
+
+            current_thl = int(utils.threshold_compose(int(threshold[1]),int(threshold[0])))
+            status.put(f"\r THL = {current_thl}")
 
             for mask_step_cmd in mask_cmds:
                 # Write the pixel matrix for the current step plus the read_pixel_matrix_datadriven command
@@ -139,18 +143,6 @@ class NoiseScan(ScanBase):
             If there is a status queue information about the status of the scan are put into it
         '''
 
-        # ----------------------------------------------------
-        # this should got to utils
-        #
-        def findNoisyPixels(pixel_array):
-
-            mean_occ = np.mean(pixel_array)
-            stdev_occ = np.std(pixel_array)
-            threshold = mean_occ + stdev_occ*5 #hardcode or user-defined?
-            badpixels = (pixel_array > threshold).astype(int)
-
-            return badpixels
-
         mask_pixels = None
 
         # ----------------------------------------------------
@@ -185,7 +177,9 @@ class NoiseScan(ScanBase):
             hist_occ = np.reshape(pix_occ, (256, 256)).T
             # ----------------------------------------------------
             if(self.automask):
-                mask_pixels = findNoisyPixels(hist_occ)
+                #mask_pixels = findNoisyPixels(hist_occ)
+                offset = 5
+                mask_pixels = utils.get_noisy_pixels(hist_occ, offset)
             # ----------------------------------------------------
             h5_file.create_carray(h5_file.root.interpreted, name='HistOcc', obj=hist_occ)
             param_range = np.unique(meta_data['scan_param_id'])
@@ -203,13 +197,11 @@ class NoiseScan(ScanBase):
             h5_file.create_carray(h5_file.root.interpreted, name='NoiseCurveHits', obj=noise_curve_hits)
 
 
-        tmp_mask_matrix = self.chip.mask_matrix
-        
         cnt_m, cnt_um = 0, 0
 
-        if(self.automask):
+        if(self.automask and mask_pixels is not None):
             print("[TEST] tpx3::scans::NoiseScan: using automask!")
-            # maybe put in dyke skipping as (x > xmin && x < xmax && y > ymin && y < ymax )?: 
+            # TODO: maybe put in dyke skipping as (x > xmin && x < xmax && y > ymin && y < ymax )?:
             #dyke_xmin = 3
             #dyke_xmax = 252
             #dyke_ymin = 3

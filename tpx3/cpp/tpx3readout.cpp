@@ -62,6 +62,9 @@ PyMODINIT_FUNC PyInit_Mod(void){
 ///////// global variables ///////////////////////////
 
 signed long int global_words_recorded = 0; 
+signed long int total_disc_err = 0;
+signed long int total_dec_err = 0;
+long int n_iter_with_errors = 0;
 
 //////////////////////////////////////////////////////
 
@@ -719,12 +722,6 @@ extern "C" {
       // importing numpy API functionality
       import_array();
      
-      //flush_debug("tpx3::cpp::tpx3redoutcpp: [INFO] starting readout"); 
-    
-      //if(l_global_start_time == std::chrono::_V2::system_clock::time_point()){
-      //  l_global_start_time == tick();
-      //}
-
       // defining last chunk read time, current time, time to wait (not implemented yet)
       double last_time = 0.0, curr_time = 0.0, timestamp = 0.0; 
       float time_wait = 0.0;
@@ -732,7 +729,7 @@ extern "C" {
       // initializing
       int glob_tries = 0; // global number of readout iterations 
       int prev_shutter = 0; // tracker of the SHUTTER state
-      float noDataTimeout = 0.0; // no data timeout setting 
+      //float noDataTimeout = 0.0; // no data timeout setting 
       std::vector<float> iter_times;
     
       // getting common global objects
@@ -743,17 +740,14 @@ extern "C" {
     
       // checking user-defined timeout when no data is available
       //
-      Py_INCREF(self);
-      noDataTimeout = getNoDataTimeout(self);
-      Py_DECREF(self);
+      //Py_INCREF(self);
+      //noDataTimeout = getNoDataTimeout(self);
+      //Py_DECREF(self);
       // checking if user enabled self._set_calculate option
-      Py_INCREF(self);
-      bool eba = checkSelfCalculate(self);
-      Py_DECREF(self);
-    
-      //std::cout<<"[debug] is \"calculate\" set? = "
-      //         <<ansi_orange<<"["<<eba<<"]"<<ansi_reset<<"\n"<<std::flush;  
-    
+      //Py_INCREF(self);
+      //bool eba = checkSelfCalculate(self);
+      //Py_DECREF(self);
+     
       // get current time     
       curr_time = get_float_time();
     
@@ -887,9 +881,19 @@ extern "C" {
         // reset rx error counters if detected any discard
         // or decoding errors
         if(n_errdisc != 0 || n_errdec !=0){ //if any decoding or discard error happens
-            std::cout<<ansi_red<<"[DEBUG] Detected: (N_DISCARD="<<n_errdisc
+            total_disc_err += n_errdisc; 
+            total_dec_err += n_errdec;
+            if(n_iter_with_errors == 0){
+                std::cout<<ansi_red<<"[DEBUG] Detected: (N_DISCARD="<<n_errdisc
                      <<"), (N_DECODE="<<n_errdec<<") errors.\n"<<ansi_reset<<std::flush;
-    
+            }
+            if(n_iter_with_errors % 100 == 0){
+                std::cout<<ansi_red<<"[WARNING] Suppressed "
+                "(N_DISCARD="<<total_disc_err<<"and N_DECODE="<<total_dec_err
+                <<") errors in "<<n_iter_with_errors<<" consecutive iterations.\n"<<ansi_reset<<std::flush;
+                total_disc_err=0;
+                total_dec_err=0;
+            }
             Py_INCREF(self);
             // calling self.rx_error_reset
             resetRXErrorCounters(self);
@@ -897,7 +901,11 @@ extern "C" {
             // reseting local counters
             n_errdisc = 0;
             n_errdec = 0;
-            
+            n_iter_with_errors++;           
+        }else{
+            total_disc_err=0;
+            total_dec_err=0;
+            n_iter_with_errors=0;
         }
     
         // calculating time to wait for befre next iteration of while loop     
@@ -906,7 +914,7 @@ extern "C" {
    
         // checking state of self.stop_readout flag  
         if(local_flagStopReadout(self)){ //if self.stop_readout is true - break the loop
-           // clear std::vector<uibnt32_t> for good measure...
+           // clear std::vector<uint32_t> for good measure...
            data.clear();
            break;
     
@@ -915,7 +923,7 @@ extern "C" {
         //assign current shutter state to be previous shutter state since all vital
         //operations are have been performed
         prev_shutter = shutter_now;
-    
+        
         //////////////////////////////////////////
     
         // clear std::vector<uint32_t> of recorded data words to avoid duplicates/overwrites
@@ -923,7 +931,7 @@ extern "C" {
     
         // increment global tries
         glob_tries++;
-           
+        
       };// end the while(true) loop
       
       // set self._record_count parameter for txp3::fifo_readout::print_status

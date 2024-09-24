@@ -2294,6 +2294,9 @@ class GUI_Set_Mask(Gtk.Window):
         self.mapview = Gtk.ScrolledWindow()
         self.mapview.set_property('width-request', 700)
         self.mapview.set_property('height-request', 700)
+#        self.mapview.set_property('width-request', 800)
+#        self.mapview.set_property('height-request', 800)
+
         self.mapview.set_border_width(0)
         self.mapview.set_policy(Gtk.PolicyType.ALWAYS, Gtk.PolicyType.ALWAYS)
         self.mapview.add_events(Gdk.EventMask.BUTTON_RELEASE_MASK | Gdk.EventMask.BUTTON1_MOTION_MASK | Gdk.EventMask.BUTTON_PRESS_MASK)
@@ -3196,6 +3199,12 @@ class GUI_Main(Gtk.Window):
         page1.grid.attach(self.SetMaskbutton, 14, 7, 3, 1)
         page1.grid.attach(self.QuitCurrentFunctionbutton, 14, 13, 3, 1)
 
+    #######################################################################################################
+    # tryna hide some established functions on page1
+    #
+
+        #self.NoiseScanbutton.hide()
+    
 
     #######################################################################################################
         ### Page 2
@@ -3854,16 +3863,6 @@ class GUI_Main(Gtk.Window):
         else:
             self.terminate_converter()
 
-    # routine fro closing TOT plot
-    #def closed_totplot(self):
-    #    self.totplot_open = False
-    #    if self.on_notebook_page == 0:
-    #        self.terminate_converter()
-    #    elif self.on_notebook_page == 1:
-    #        self.Tag_totplot = GLib.timeout_add(250, self.totplot_widget.upd_histo)
-    #    else:
-    #        self.terminate_converter()
-
     def terminate_simulator(self):
         if self.simulator_process == None:
             return
@@ -3900,22 +3899,115 @@ def GUI_start():
 
 GUI = GUI_Main()
 
-def main():
-    # temp style fillding
-    cssProvider = Gtk.CssProvider()
-    cssProvider.load_from_path('UI/GUI/style.css')
-    print("BERGA! [{}]".format(cssProvider))
-    screen = Gdk.Screen.get_default()
-    #styleContext = Gtk.StyleContext()
-    Gtk.StyleContext.add_provider_for_screen(screen, 
-                                         cssProvider, 
-                                         Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    #------------------------
+# ---------------------------------------------------------------------------------
+# testing a welcome window with option to choose GUI operation mode
+# ---------------------------------------------------------------------------------
+class GUI_simple(Gtk.Window):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+
+        self.set_title('TPX3 DAQ')
+        self.win_margin = 10
+        self.set_default_size(300,300)
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        vbox.set_margin_top(self.win_margin)
+        vbox.set_margin_bottom(self.win_margin)
+        vbox.set_margin_start(self.win_margin)
+        vbox.set_margin_end(self.win_margin)
+        self.add(vbox)
+
+        # some empty string placeholders for spacingh out buttons
+        self.placeh0 = Gtk.Label()
+        self.placeh0.set_text(' ')
+        self.placeh1 = Gtk.Label()
+        self.placeh1.set_text(' ')
+
+        self.option_label = Gtk.Label()
+        self.option_label.set_text('User session operations:')
+        vbox.pack_start(self.option_label,True,True,0)
+
+        self.settings = Gtk.Button(label='Run & Chip Settings')
+        vbox.pack_start(self.settings,True,True,0)
+
+        vbox.pack_start(self.placeh0,True,True,0)
+
+        self.initHW = Gtk.Button(label='Initialize Readout')
+        vbox.pack_start(self.initHW, True, True, 0)
+
+        self.calibrate = Gtk.Button(label='Calibrate Readout')
+        vbox.pack_start(self.calibrate,True,True,0)
+
+        self.scan = Gtk.Button(label='Scans')
+        vbox.pack_start(self.scan,True,True,0)
+
+        self.take_data = Gtk.Button(label='Record Data')
+        vbox.pack_start(self.take_data,True,True,0)
+
+        vbox.pack_start(self.placeh1,True,True,0)
+
+        self.show_all()
+
+    def window_destroy(self, widget, event = True):
+        self.destroy()
+
+########################################
+# temp welcome window
+class GUI_welcome(Gtk.Window):
+    def __init__(self, *args, **kwargs):
+        
+        super().__init__(*args,**kwargs)
+        self.set_title('TPX3 DAQ')
+        self.set_default_size(300,300)        
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        vbox.set_margin_top(20)
+        vbox.set_margin_bottom(20)
+        vbox.set_margin_start(20)
+        vbox.set_margin_end(20)
+        self.add(vbox)
+
+        self.welcome_label = Gtk.Label()
+        self.welcome_label.set_text("Welcome!\nChoose your operation mode:") 
+        vbox.pack_start(self.welcome_label,True,True,0)
+
+        self.userButton = Gtk.Button(label = "User mode")
+        self.userButton.connect('clicked', self.on_user_button_clicked)
+        vbox.pack_start(self.userButton,True,True,0)
+
+        self.expertButton = Gtk.Button(label = "Expert mode")
+        self.expertButton.connect('clicked', self.on_expert_button_clicked)
+        vbox.pack_start(self.expertButton,True,True,0)
+
+        self.show_all()
+
+    def on_user_button_clicked(self,button):
+        user_gui = GUI_simple()
+        user_gui.connect("destroy", Gtk.main_quit) 
+        user_gui.show_all()
+        self.hide()
+
+    def on_expert_button_clicked(self,widget):
+        GUI = GUI_Main() 
+        GUI.connect('destroy', quit_procedure)
+        GUI.show_all()
+        GUI.progressbar.hide()
+        self.hide()
+
+#######################################
+def main():
+
+    #window = GUI_welcome()
+    #window.connect('destroy', Gtk.main_quit)
+    #window.show_all()
+    ###################################
     GUI.connect('destroy', quit_procedure)
     GUI.show_all()
     GUI.progressbar.hide()
+    ###################################
     Gtk.main()
 
 if __name__ == '__main__':
     main()
+

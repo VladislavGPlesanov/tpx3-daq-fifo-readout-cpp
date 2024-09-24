@@ -253,6 +253,7 @@ class ScanHardware(object):
                     break
 
         if status != None:
+            status.put("tpx3::scans::ScanHardware: Finished link status probing")
             status.put("iteration_finish_symbol")
 
         if results == None:

@@ -361,6 +361,15 @@ def get_equal_path():
     equal_path = os.path.join(user_path, 'equalisations')
     return equal_path
 
+def get_noisy_pixels(pixel_array, const_offset):
+    
+    mean_occ = np.mean(pixel_array)
+    stdev_occ = np.std(pixel_array)
+    threshold = mean_occ + stdev_occ * const_offset
+    bad_pixels = (pixel_array > threshold).astype(int)
+    return bad_pixels
+
+
 class DeltaTemplate(Template):
     delimiter = "%"
 

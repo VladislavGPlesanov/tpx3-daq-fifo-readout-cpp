@@ -90,6 +90,9 @@ class EqualisationCharge(ScanBase):
             status.put("Starting scan for THR = 0")
         if status != None:
             status.put("iteration_symbol")
+        
+        status.put(" ")
+
         thresholds = utils.create_threshold_list(utils.get_coarse_jumps(Vthreshold_start, Vthreshold_stop))
 
         if progress == None:
@@ -104,6 +107,10 @@ class EqualisationCharge(ScanBase):
             # Set the threshold
             self.chip.set_dac("Vthreshold_coarse", int(threshold[0]))
             self.chip.set_dac("Vthreshold_fine", int(threshold[1]))
+
+            current_thl = int(utils.threshold_compose(int(threshold[1]),int(threshold[0])))
+
+            status.put(f"\r THR = 0, THL = {current_thl}")
 
             with self.readout(scan_param_id=scan_param_id):
                 step = 0
@@ -149,12 +156,17 @@ class EqualisationCharge(ScanBase):
         else:
             # Initialize counter for progress
             step_counter = 0
+        status.put(" ")
 
         scan_param_id = 0
         for threshold in thresholds:
             # Set the threshold
             self.chip.set_dac("Vthreshold_coarse", int(threshold[0]))
             self.chip.set_dac("Vthreshold_fine", int(threshold[1]))
+
+            current_thl = int(utils.threshold_compose(int(threshold[1]),int(threshold[0])))
+
+            status.put(f"\r THR = 15, THL = {current_thl}")
 
             with self.readout(scan_param_id=scan_param_id + len(thresholds)):
                 step = 0
@@ -346,7 +358,7 @@ class EqualisationCharge(ScanBase):
             if(n_masked > 0):
                 print(f"tpx3::EqualisationCharge::analysis: found {n_masked} channels with equalisation distance above 16")
  
-            print("masked = {}, unmasked = {}".format(cnt_m, cnt_um))
+            print("masked = {}, unmasked = {}".format(n_masked, n_unmasked))
             self.save_mask_matrix() 
        
         else:
