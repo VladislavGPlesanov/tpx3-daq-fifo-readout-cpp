@@ -65,6 +65,7 @@ signed long int global_words_recorded = 0;
 signed long int total_disc_err = 0;
 signed long int total_dec_err = 0;
 long int n_iter_with_errors = 0;
+const long int max_errors = 1000;
 
 //////////////////////////////////////////////////////
 
@@ -251,12 +252,12 @@ extern "C" {
                     <<PyObject_Print(tcp_readout_interval,stdout,0)<<"] s"<<std::flush;
             Py_DECREF(tcp_readout_interval);
           }else{
-            flush_debug("Can not access: tcp readout interval");
+            flush_debug("Can not access tcp readout interval");
             Py_DECREF(tcp_readout_interval);
           }
     
         }else{
-            flush_debug("Object \"intf\" is NULL!");
+            flush_debug("Basil interface object \"intf\" is NULL!");
         }
     
     }
@@ -881,19 +882,26 @@ extern "C" {
         // reset rx error counters if detected any discard
         // or decoding errors
         if(n_errdisc != 0 || n_errdec !=0){ //if any decoding or discard error happens
-            total_disc_err += n_errdisc; 
-            total_dec_err += n_errdec;
-            if(n_iter_with_errors == 0){
+
+            //total_disc_err += n_errdisc; 
+            //total_dec_err += n_errdec;
+
+            if(n_iter_with_errors < 10){
                 std::cout<<ansi_red<<"[DEBUG] Detected: (N_DISCARD="<<n_errdisc
-                     <<"), (N_DECODE="<<n_errdec<<") errors.\n"<<ansi_reset<<std::flush;
+                     <<"), (N_DECODE="<<n_errdec<<") errors"<<ansi_reset<<"\n"<<std::flush;
             }
-            if(n_iter_with_errors % 100 == 0){
-                std::cout<<ansi_red<<"[WARNING] Suppressed "
-                "(N_DISCARD="<<total_disc_err<<"and N_DECODE="<<total_dec_err
-                <<") errors in "<<n_iter_with_errors<<" consecutive iterations.\n"<<ansi_reset<<std::flush;
-                total_disc_err=0;
-                total_dec_err=0;
-            }
+
+            //n_iter_with_errors++;           
+
+            //if(n_iter_with_errors == max_errors){
+            //    std::cout<<ansi_red<<"[WARNING] Suppressed "
+            //    "(N_DISCARD="<<total_disc_err<<"and N_DECODE="<<total_dec_err
+            //    <<") errors in "<<n_iter_with_errors
+            //    <<" consecutive iterations"<<ansi_reset<<"\n"<<std::flush;
+            //    total_disc_err=0;
+            //    total_dec_err=0;
+            //    n_iter_with_errors=0;
+            //}
             Py_INCREF(self);
             // calling self.rx_error_reset
             resetRXErrorCounters(self);
@@ -901,12 +909,13 @@ extern "C" {
             // reseting local counters
             n_errdisc = 0;
             n_errdec = 0;
-            n_iter_with_errors++;           
-        }else{
-            total_disc_err=0;
-            total_dec_err=0;
-            n_iter_with_errors=0;
+            //n_iter_with_errors++;           
         }
+        //else{
+        //    total_disc_err=0;
+        //    total_dec_err=0;
+        //    n_iter_with_errors=0;
+        //}
     
         // calculating time to wait for befre next iteration of while loop     
         float t_iteration = timeDiff(iter_start,tick());

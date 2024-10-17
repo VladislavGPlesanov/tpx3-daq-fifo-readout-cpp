@@ -710,6 +710,28 @@ class ScanBase(object):
         elif self.scan_id == 'ToTCalib':
             self.chip._configs["Op_mode"] = 0
 
+        #------------------------------------------------
+        # thing above can be writen as:
+        #
+        # counter_mode_scans = ['EqualisationCharge', 'EqualisationNoise', 'PixelDACopt',
+        #                        'TestpulseScan', 'ThresholdScan', 'ThresholdCalib', 'NoiseScan']
+        # if self.scan_id in counter_mode_scans:
+        #   self.chip._configs["Op_mode"] = 2
+        # if self.scan_id == 'ToTCalib':
+        #   self.chip._configs["Op_mode"] = 0
+        #
+        #------------------------------------------------
+
+
+        # test check if fToA is enabled (which is nopt supposed to be in counter mode)
+        #
+        if self.chip._configs["Op_mode"]==2 and self.chip._configs["Fast_Io_en"]==1:
+            self.chip._configs["Fast_Io_en"]==0
+            msg = "Disabling fToA for counting mode operation"
+            self.logger.info("tpx3::scan_base::start: "+msg) 
+            status.put(msg) 
+        # ------------------------------------------------
+
         # Setup HDF5 file
         filename = self.output_filename + '.h5'
         self.h5_file = tb.open_file(filename, mode='w', title=self.scan_id)

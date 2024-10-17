@@ -208,6 +208,13 @@ class ThresholdCalib(ScanBase):
             general_config = h5_file.root.configuration.generalConfig[:]
             op_mode = [row[1] for row in general_config if row[0]==b'Op_mode'][0]
             vco = [row[1] for row in general_config if row[0]==b'Fast_Io_en'][0]
+            # --------------------------------------------------------------
+            polarity = [row[1] for row in general_config if row[0]==b'Polarity'][0]
+            print("tpx3::scans::EqualisationCharge: Found polarity <{}>".format(polarity))
+            invert_fit = False
+            if(polarity == 1):
+                invert_fit = True
+            # --------------------------------------------------------------
 
             # Create group to save all data and histograms to the HDF file
             h5_file.create_group(h5_file.root, 'interpreted_' + str(iteration), 'Interpreted Data')
@@ -240,7 +247,9 @@ class ThresholdCalib(ScanBase):
 
             # Fit S-Curves to the histograms for all pixels
             param_range = list(range(Vthreshold_start, Vthreshold_stop + 1))
-            thr2D, sig2D, chi2ndf2D = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D, sig2D, chi2ndf2D = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
+            #thr2D, sig2D, chi2ndf2D, _ = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=True, progress = progress)
+            thr2D, sig2D, chi2ndf2D, _ = analysis.fit_scurves_multithread(scurve, scan_param_range=param_range, n_injections=n_injections, invert_x=invert_fit, progress = progress)
 
             h5_file.create_carray(eval(interpreted_call), name='HistSCurve', obj=scurve)
             h5_file.create_carray(eval(interpreted_call), name='Chi2Map', obj=chi2ndf2D.T)

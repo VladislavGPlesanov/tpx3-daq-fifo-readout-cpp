@@ -333,10 +333,10 @@ class EqualisationCharge(ScanBase):
             h5_file.create_carray(h5_file.root.interpreted, name='EqualisationDistancesMap', obj=eq_distance)
 
         n_masked = 0 
-        n_unmasked = 0
 
         if(self.automask):
 
+            # masking pixels with eq distance greather than 8 dac cts in each direction
             badPixels = ((eq_distance > 8) | (eq_distance < -8)).astype(np.uint8)
     
             try:
@@ -347,9 +347,10 @@ class EqualisationCharge(ScanBase):
                             self.chip.mask_matrix[x,y]=1
                             n_masked+=1
 
-                        if(self.chip.mask_matrix[x,y] != 0 and mask_pixels[x,y] == 0):
-                            #print("tpx3::scans::NoiseScan: unmasking pixel {},{}".format(x,y))
-                            self.chip.mask_matrix[x,y] = 0
+                        # probably unmasking channels is not a good idea....
+                        #if(self.chip.mask_matrix[x,y] != 0 and mask_pixels[x,y] == 0):
+                        #    #print("tpx3::scans::NoiseScan: unmasking pixel {},{}".format(x,y))
+                        #    self.chip.mask_matrix[x,y] = 0
                             n_unmasked+=1
 
             except:
@@ -358,7 +359,7 @@ class EqualisationCharge(ScanBase):
             if(n_masked > 0):
                 print(f"tpx3::EqualisationCharge::analysis: found {n_masked} channels with equalisation distance above 16")
  
-            print("masked = {}, unmasked = {}".format(n_masked, n_unmasked))
+            print("masked = {}".format(n_masked))
             self.save_mask_matrix() 
        
         else:

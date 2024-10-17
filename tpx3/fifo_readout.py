@@ -131,7 +131,6 @@ class FifoReadout(object):
         return result / float(self._moving_average_time_period)
 
     def start(self, callback=None, errback=None, reset_rx=False, reset_sram_fifo=False, reset_errors=True, clear_buffer=False, fill_buffer=False, no_data_timeout=None):
-        #print("OLOLO, starting fifo readout")
         if self._is_running:
             raise RuntimeError('Readout already running: use stop() before start()')
 
@@ -288,7 +287,7 @@ class FifoReadout(object):
                 if discard_error > 0 or decode_error > 0:
                     #TODO: supress error msg if get them on each iteration
                     self.logger.warning('There were {} discard errors and {} decode errors - Resetting error counters'.format(discard_error, decode_error))
-                    self.status.put(f'Encountered N_DISC_ERR={discard_error} \& N_DEC_ERR={decode_error}')
+                    #self.status.put(f'Encountered N_DISC_ERR={discard_error} \& N_DEC_ERR={decode_error}')
                     self.rx_error_reset()
             finally:
                 time_wait = self.readout_interval - (time() - time_read)
@@ -326,10 +325,21 @@ class FifoReadout(object):
         while True:
             try:
                 if not any(self.get_rx_sync_status()):
-                    raise RxSyncError('No RX sync')
+                    errmsg = 'NO RX Sync'
+                    #raise RxSyncError('No RX sync')
+                    raise RxSyncError(errmsg)
+                    msg = 'fifo_readout::watchdog: Lost RX synchronosation!'
+                    self.status.put(msg)
+                    self.logger.error(msg)
                 cnt = self.get_rx_fifo_discard_count()
                 if any(cnt):
-                    raise FifoError('RX FIFO discard error(s) detected ', cnt)
+                    msg = 'RX FIFO discard error(s) detected'
+                    #raise FifoError('RX FIFO discard error(s) detected ', cnt)
+                    raise FifoError(msg, cnt)
+                    #self.status.put(msg)
+                    self.logger.error(msg)
+                    #self.status.put(f'fifo_readout::watchdog: {cnt} RX FIFO discard error(s) detected')
+                    #self.logger.error('fifo_readout::watchdog: {cnt} RX FIFO discard error(s) detected ')
             except Exception:
                 self.errback(sys.exc_info())
             if self.stop_readout.wait(self.readout_interval * 10):

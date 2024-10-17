@@ -1330,8 +1330,8 @@ class GUI_SetDAC(Gtk.Window):
                          'VPreamp_NCAS':        {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
                          'Ibias_Ikrum':         {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
                          'Vfbk':                {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True },
-                         'Vthreshold_fine':     {"value" : 0, "default": 255, "size" : 511, "adjust": None, "spinButton": None, "label": None, "show": False },# def - True
-                         'Vthreshold_coarse':   {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False },# def - True 
+                         'Vthreshold_fine':     {"value" : 0, "default": 255, "size" : 511, "adjust": None, "spinButton": None, "label": None, "show": True },# def - True
+                         'Vthreshold_coarse':   {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": True },# def - True 
                          'Vthreshold_combined': {"value" : 0, "default": 1375,"size" : 1911,"adjust": None, "spinButton": None, "label": None, "show": True },
                          'Ibias_DiscS1_ON':     {"value" : 0, "default": 127, "size" : 255, "adjust": None, "spinButton": None, "label": None, "show": True }, # hide
                          'Ibias_DiscS1_OFF':    {"value" : 0, "default": 7,   "size" : 15,  "adjust": None, "spinButton": None, "label": None, "show": False},
@@ -3055,6 +3055,10 @@ class GUI_Main(Gtk.Window):
 
         self.notebook.connect('switch-page', self.switch_notebook_page)
 
+
+        self.statusstring6 = ''
+        self.statusstring5 = ''
+        #------------------------
         self.statusstring4 = ''
         self.statusstring3 = ''
         self.statusstring2 = ''
@@ -3294,17 +3298,24 @@ class GUI_Main(Gtk.Window):
         self.page2.grid.attach(self.reload_status, 0, 3+self.hw_links+1, 1,1)
 
         self.plotwidget = plotwidget(data_queue = self.data_queue)
-        # adding testplot        
+        # adding testplot 
 
-        self.totplot_widget = TOTplot(data_queue = self.data_queue)
+        self.totplot_widget = TOTplot(data_queue = self.data_queue, upd_data = self.upd_mean_label)
+        #self.totplot_widget = TOTplot(data_queue = self.data_queue)
         # testing TOA testplot
         self.toaplot_widget = TOAplot(data_queue = self.data_queue)
+
+        self.mean_tot_number = Gtk.Label()
+        self.mean_tot_number.set_text("Average TOT=0.0")
+
+        self.page2.grid.attach_next_to(self.mean_tot_number,self.reload_status, Gtk.PositionType.BOTTOM,1,1)
 
         # packing buttons below
         #self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
         self.page2.pack_start(self.totplot_widget.canvas_tot, True, False, 0)
         self.page2.pack_start(self.toaplot_widget.canvas_toa, True, False, 0)
         #self.page2.pack_start(self.page2.space, True, False, 0)
+        
         self.page2.pack_start(self.page2.space1, True, False, 0)
 
         self.Tag3 = GLib.timeout_add(250, self.totplot_widget.upd_histo)
@@ -3316,6 +3327,8 @@ class GUI_Main(Gtk.Window):
 
     ###################################################################################################
     ### Overall window event
+    def upd_mean_label(self,value):
+        self.mean_tot_number.set_text("Average TOT={}".format(round(value,2)))
 
     def window_on_button_press_event(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3 and self.open == False:
@@ -3398,6 +3411,10 @@ class GUI_Main(Gtk.Window):
                 self.statuslabel5.set_text('')
                 self.statuslabel6.set_text('')
                 self.statuslabel7.set_text('')
+
+                self.statusstring6 = ''
+                self.statusstring5 = ''
+                
                 self.statusstring4 = ''
                 self.statusstring3 = ''
                 self.statusstring2 = ''
@@ -3438,6 +3455,10 @@ class GUI_Main(Gtk.Window):
         self.statuslabel5.set_text('')
         self.statuslabel6.set_text('')
         self.statuslabel7.set_text('')
+
+        self.statusstring6 = ''
+        self.statusstring5 = ''
+
         self.statusstring4 = ''
         self.statusstring3 = ''
         self.statusstring2 = ''
@@ -3599,6 +3620,10 @@ class GUI_Main(Gtk.Window):
             if self.iteration_symbol == True:
                 self.statusstring1 = statusstring
             else:
+                
+                self.statusstring6 = self.statusstring5
+                self.statusstring5 = self.statusstring4
+
                 self.statusstring4 = self.statusstring3
                 self.statusstring3 = self.statusstring2
                 self.statusstring2 = self.statusstring1
@@ -3607,6 +3632,9 @@ class GUI_Main(Gtk.Window):
                 runtime = datetime.now() - self.step_starttime
                 self.progressbar.set_show_text(self.show_progress_text)
                 self.progressbar.set_text(str(int(0)) + ' %, Step time ' + utils.strfdelta(runtime, '%M:%S') + ' / ' + 'xx:xx')
+            self.statuslabel6.set_text(self.statusstring6)
+            self.statuslabel5.set_text(self.statusstring5)
+
             self.statuslabel4.set_text(self.statusstring4)
             self.statuslabel5.set_text(self.statusstring3)
             self.statuslabel6.set_text(self.statusstring2)
@@ -3623,6 +3651,10 @@ class GUI_Main(Gtk.Window):
         self.statusstring2 = ''
         self.statusstring3 = ''
         self.statusstring4 = ''
+
+        self.statusstring5 = ''
+        self.statusstring6 = ''
+        
 
     def get_progress_bar(self):
         return self.progressbar

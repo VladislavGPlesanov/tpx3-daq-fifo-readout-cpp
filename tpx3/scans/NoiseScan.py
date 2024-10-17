@@ -178,7 +178,7 @@ class NoiseScan(ScanBase):
             # ----------------------------------------------------
             if(self.automask):
                 #mask_pixels = findNoisyPixels(hist_occ)
-                offset = 5
+                offset = 5 # five sigmas
                 mask_pixels = utils.get_noisy_pixels(hist_occ, offset)
             # ----------------------------------------------------
             h5_file.create_carray(h5_file.root.interpreted, name='HistOcc', obj=hist_occ)

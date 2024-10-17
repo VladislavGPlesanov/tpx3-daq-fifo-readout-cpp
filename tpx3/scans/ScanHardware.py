@@ -213,6 +213,8 @@ class ScanHardware(object):
         dict_list = {'registers': dict_list}
         with open(yaml_file, 'w') as file:
             yaml.dump(dict_list, file)
+        
+        status.put('Saving link settings to YAML')
 
         # Create a list if unique Chip-ID strings and corresponding Chip-ID bits
         ID_List = []
@@ -253,7 +255,6 @@ class ScanHardware(object):
                     break
 
         if status != None:
-            status.put("tpx3::scans::ScanHardware: Finished link status probing")
             status.put("iteration_finish_symbol")
 
         if results == None:

@@ -95,13 +95,6 @@ def vths(scurves, param_range, Vthreshold_start):
                 if(vths[x,y] > Vthreshold_start+len(param_range)):
                     print("tpx3::analysis:vths: High Threshold: \u03A3 = {}, weighted \u03A3= {}".format(sum_of_hits, weighted_sum_of_hits))
 
-
-
-#            if(cnt % 5000 == 0):
-#                print("tpx3::analysis::vths: params for pixel [{},{}]".format(x,y))
-#                print("sum of hits = {}, weighted sum = {}".format(sum_of_hits, weighted_sum_of_hits))
-#            cnt+=1 
-#
     return vths
 
 def vth_hist(vths, Vthreshold_stop):
@@ -287,7 +280,16 @@ def save_and_correct(raw_data, indices):
 
         # call recursively until everything is as it should
         raw_data, indices, num = save_and_correct(raw_data,indices)
-        num += 1
+
+        #try:
+
+        #    raw_data, indices, num = save_and_correct(raw_data,indices)
+        #    num += 1
+
+        #except RecursionError:
+
+        #    return raw_data, indices, num
+
     # everything is fine, return
     else:
         num = 0
