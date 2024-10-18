@@ -21,7 +21,7 @@ from tpx3.scan_base import ConfigError
 from UI.tpx3_logger import file_logger, mask_logger, equal_logger, TPX3_datalogger
 from UI.GUI.converter import utils as conv_utils
 from UI.GUI.converter.converter_manager import ConverterManager
-from tpx3.utils import get_software_version, get_git_branch, get_git_commit, get_git_date, threshold_compose, threshold_decompose
+from tpx3.utils import get_software_version, get_git_branch, get_git_commit, get_git_date, threshold_compose, threshold_decompose, get_root_data_path
 
 
 # In this part all callable normal function names should be in the list functions
@@ -689,7 +689,8 @@ class TPX3_CLI_function_call(object):
             print('Unknown DAC-name')
 
     def Load_Equalisation(object, equal_path = None):
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'equalisations')
 
@@ -707,7 +708,8 @@ class TPX3_CLI_function_call(object):
             print('> Loaded equalisation ' + full_path)
 
     def Save_Equalisation(object, file_name = None):
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'equalisations')
 
@@ -728,7 +730,9 @@ class TPX3_CLI_function_call(object):
             print('> Saved equalisation to ' + full_path)
 
     def Uniform_Equalisation(object, pixel_threshold = None):
-        user_path = os.path.expanduser('~')
+
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'equalisations')
 
@@ -753,7 +757,8 @@ class TPX3_CLI_function_call(object):
         print('> Set a uniform equalisation matrix with pixel threshold ' + str(pixel_threshold) + '.')
 
     def Save_Backup(object, file_name = None):
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
 
@@ -943,8 +948,9 @@ class TPX3_CLI_function_call(object):
             print('No mask file loaded, you cannot unmask nothing!')
 
     def Load_Mask(object, mask_path = None):
-        user_path = '~'
-        user_path = os.path.expanduser(user_path)
+        user_path = get_root_data_path()
+        #user_path = '~'
+        #user_path = os.path.expanduser(user_path)
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'masks')
 
@@ -962,8 +968,9 @@ class TPX3_CLI_function_call(object):
             print('Loaded mask ' + full_path)
 
     def Save_Mask(object, file_name = None):
-        user_path = '~'
-        user_path = os.path.expanduser(user_path)
+        user_path = get_root_data_path()
+        #user_path = '~'
+        #user_path = os.path.expanduser(user_path)
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'masks')
 

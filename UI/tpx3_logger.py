@@ -5,12 +5,15 @@ import glob
 import yaml
 import numpy as np
 import tables as tb
-from tpx3.utils import check_user_folders
+from tpx3.utils import check_user_folders, get_root_data_path
 
 class mask_logger(object):
     '''
         The mask logger takes care of the mask file, adds and removes items
     '''
+
+    #self.user_home = '~'
+
     def create_file(filename = None):
         user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
@@ -279,11 +282,14 @@ class file_logger(object):
         '''
             This function looks for the most recent backup file in the backup folder
         '''
-        user_path = os.path.expanduser('~')
+
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
 
-        user_path_tmp = os.path.expanduser('~')
+        #user_path_tmp = os.path.expanduser('~')
+        user_path_tmp = get_root_data_path()
         user_path_tmp = os.path.join(user_path, 'Timepix3')
         user_path_tmp = os.path.join(user_path, 'tmp')
         #Look for newest backup in backup folder

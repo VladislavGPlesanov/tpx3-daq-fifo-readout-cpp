@@ -21,7 +21,7 @@ from basil.utils.BitLogic import BitLogic
 from contextlib import contextmanager
 from .tpx3 import TPX3
 from .fifo_readout import FifoReadout
-from tpx3.utils import check_user_folders, get_equal_path, get_software_version
+from tpx3.utils import check_user_folders, get_equal_path, get_software_version, get_root_data_path
 from tables.exceptions import NoSuchNodeError
 import six
 from six.moves import range
@@ -124,7 +124,8 @@ class ScanBase(object):
 
     def set_directory(self,sub_dir=None):
         # Get the user directory
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         if not os.path.exists(user_path):
             os.makedirs(user_path)

@@ -2192,7 +2192,8 @@ class GUI_Mask_Entry_Window(Gtk.Window):
 
 class GUI_Set_Mask(Gtk.Window):
     def __init__(self):
-        user_path = os.path.expanduser('~')
+        user_path = utils.get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'appdata')
         Gtk.Window.__init__(self, title = 'Set Mask')
@@ -2350,7 +2351,8 @@ class GUI_Set_Mask(Gtk.Window):
         self.show_all()
 
     def draw_clicked(self):
-        user_path = os.path.expanduser('~')
+        user_path = utils.get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'appdata')
         self.cr.rectangle(0, 0, 2610, 2610)
@@ -2606,7 +2608,8 @@ class GUI_Main_Settings(Gtk.Window):
 
     def on_load_Backup_button_clicked(self, widget):
 
-        user_path = os.path.expanduser('~')
+        user_path = utils.get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
 
@@ -2637,7 +2640,8 @@ class GUI_Main_Settings(Gtk.Window):
         backup_dialog.destroy()
 
     def on_load_Equalisation_button_clicked(self, widget):
-        user_path = os.path.expanduser('~')
+        user_path = utils.get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'equalisations')
 
@@ -2665,8 +2669,9 @@ class GUI_Main_Settings(Gtk.Window):
         equalisation_dialog.destroy()
 
     def on_load_Mask_button_clicked(self, widget):
-        user_path = '~'
-        user_path = os.path.expanduser(user_path)
+        user_path = utils.get_root_data_path()
+        #user_path = '~'
+        #user_path = os.path.expanduser(user_path)
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'masks')
 
@@ -2730,7 +2735,8 @@ class GUI_Main_Settings(Gtk.Window):
 class GUI_Main_Save_Backup_Input(Gtk.Window):
     def __init__(self):
 
-        self.user_path = os.path.expanduser('~')
+        self.user_path = utils.get_root_data_path()
+        #self.user_path = os.path.expanduser('~')
         self.user_path = os.path.join(self.user_path, 'Timepix3')
         self.user_path = os.path.join(self.user_path, 'backups')
 
@@ -2771,7 +2777,8 @@ class GUI_Main_Save_Backup_Input(Gtk.Window):
 
 class GUI_Main_Set_Uniform_Equalisation_Input(Gtk.Window):
     def __init__(self):
-        self.user_path = os.path.expanduser('~')
+        self.user_path = utils.get_root_data_path()
+        #self.user_path = os.path.expanduser('~')
         self.user_path = os.path.join(self.user_path, 'Timepix3')
         self.user_path = os.path.join(self.user_path, 'equalisations')
 
@@ -2819,7 +2826,8 @@ class GUI_Main_Set_Uniform_Equalisation_Input(Gtk.Window):
 
 class GUI_Main_Save_Equalisation_Input(Gtk.Window):
     def __init__(self):
-        self.user_path = os.path.expanduser('~')
+        self.user_path = utils.get_root_data_path()
+        #self.user_path = os.path.expanduser('~')
         self.user_path = os.path.join(self.user_path, 'Timepix3')
         self.user_path = os.path.join(self.user_path, 'equalisations')
 
@@ -2861,8 +2869,9 @@ class GUI_Main_Save_Equalisation_Input(Gtk.Window):
 class GUI_Main_Save_Mask_Input(Gtk.Window):
     def __init__(self):
 
-        self.user_path = '~'
-        self.user_path = os.path.expanduser(self.user_path)
+        self.user_path = utils.get_root_data_path()
+        #self.user_path = '~'
+        #self.user_path = os.path.expanduser(self.user_path)
         self.user_path = os.path.join(self.user_path, 'Timepix3')
         self.user_path = os.path.join(self.user_path, 'masks')
 
@@ -3291,8 +3300,7 @@ class GUI_Main(Gtk.Window):
         self.page2.grid.attach(self.plotbutton, 0, 0, 1, 1)
         self.page2.grid.attach(self.simulationbutton, 0, 1, 1, 1)
         self.page2.grid.attach(self.Link_status, 0, 2, 1, 1)
-        for linknr in range(self.hw_links):
-            #self.page2.grid.attach(self.link_status_button[linknr], 0, 3+linknr, 1,1)
+        for linknr in range(self.hw_links):            #self.page2.grid.attach(self.link_status_button[linknr], 0, 3+linknr, 1,1)
             self.page2.grid.attach(self.link_status_label[linknr], 0, 3+linknr, 1,1)
 
         self.page2.grid.attach(self.reload_status, 0, 3+self.hw_links+1, 1,1)
@@ -3300,15 +3308,31 @@ class GUI_Main(Gtk.Window):
         self.plotwidget = plotwidget(data_queue = self.data_queue)
         # adding testplot 
 
-        self.totplot_widget = TOTplot(data_queue = self.data_queue, upd_data = self.upd_mean_label)
+        self.totplot_widget = TOTplot(data_queue = self.data_queue, 
+                                      upd_data = self.upd_mean_label,
+                                      upd_rate = self.update_rate,
+                                      readout_interval = TPX3_datalogger.read_value(name = 'Readout_Speed'))
+        #self.totplot_widget = TOTplot(data_queue = self.data_queue, upd_data = self.upd_mean_label)
         #self.totplot_widget = TOTplot(data_queue = self.data_queue)
         # testing TOA testplot
         self.toaplot_widget = TOAplot(data_queue = self.data_queue)
 
+        self.mean_tot_name = Gtk.Label()
+        self.mean_tot_name.set_text("Average TOT")
         self.mean_tot_number = Gtk.Label()
-        self.mean_tot_number.set_text("Average TOT=0.0")
+        self.mean_tot_number.set_text("0.0 [cts]")
+        self.data_rate_name = Gtk.Label()
+        self.data_rate_name.set_text("Average data rate")
+        self.data_rate_number = Gtk.Label()
+        self.data_rate_number.set_text("0.0 [Hz]")
 
-        self.page2.grid.attach_next_to(self.mean_tot_number,self.reload_status, Gtk.PositionType.BOTTOM,1,1)
+        # ---- tryin' mean TOT output ----
+        self.page2.grid.attach_next_to(self.mean_tot_name,self.reload_status, Gtk.PositionType.BOTTOM,1,1)
+        self.page2.grid.attach_next_to(self.mean_tot_number,self.mean_tot_name, Gtk.PositionType.BOTTOM,1,1)
+
+        # ---- tryin' data rate output ----
+        self.page2.grid.attach_next_to(self.data_rate_name,self.mean_tot_number, Gtk.PositionType.BOTTOM,1,1)
+        self.page2.grid.attach_next_to(self.data_rate_number,self.data_rate_name, Gtk.PositionType.BOTTOM,1,1)
 
         # packing buttons below
         #self.page2.pack_start(self.plotwidget.canvas, True, False, 0)
@@ -3328,7 +3352,10 @@ class GUI_Main(Gtk.Window):
     ###################################################################################################
     ### Overall window event
     def upd_mean_label(self,value):
-        self.mean_tot_number.set_text("Average TOT={}".format(round(value,2)))
+        self.mean_tot_number.set_text("{} [cts]".format(round(value,2)))
+
+    def update_rate(self, value):
+        self.data_rate_number.set_text("{} [Hz]".format(round(value,2)))
 
     def window_on_button_press_event(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3 and self.open == False:
@@ -3779,30 +3806,16 @@ class GUI_Main(Gtk.Window):
     def reload_status_clicked(self, button):
  
         for link_number in range(self.hw_links):
-            #temp_link_label = Gtk.Label()
-            #temp_link_label.set_text(str(link_number))
-            #self.link_label.append(temp_link_label)
-            #temp_link_status_button = Gtk.Button()
-            #self.link_status_button.append(temp_link_status_button)
             status = TPX3_datalogger.get_link_status(link_number)
             print(f"status for {link_number} is {status}")
-            #this_label = self.link_status_button[link_number].get_child()
             if status in [1, 3, 5, 7]:
                 self.link_status_label[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
                 self.link_status_label[link_number].override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,0.7,0,1))
 
-                #self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, ON)  ')
-                #this_label = self.link_status_button[link_number].get_child()
-                ##this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,1,0,1))
-                #this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0,0.7,0,1))
             else:
                 self.link_status_label[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
                 self.link_status_label[link_number].override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.7,0,0,1))
 
-                #self.link_status_button[link_number].set_label(f'  Link:{link_number} ({status}, OFF)  ')
-                #this_label = self.link_status_button[link_number].get_child()
-                #this_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.7,0,0,1))
-               
 
     def on_plotbutton_clicked(self, widget):
         if not self.plot1_window_open:
@@ -3830,7 +3843,8 @@ class GUI_Main(Gtk.Window):
             self.simulation_running = False
 
     def select_simulation_file(self):
-        user_path = os.path.expanduser('~')
+        user_path = utils.get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
 
         simulation_dialog = Gtk.FileChooserDialog(title = 'Please choose a HDF5 file for simulation', parent = self, action = Gtk.FileChooserAction.OPEN)

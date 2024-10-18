@@ -7,6 +7,7 @@ import os
 from string import Template
 import subprocess
 import pkg_resources
+import yaml
 from datetime import datetime
 import numpy as np
 
@@ -305,6 +306,31 @@ def print_nice(f):
         raise TypeError("`print_nice` only supports floats and ints! Input " +
                         "is of type {}!".format(type(f)))
 
+def get_root_data_path():
+
+    proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+    print(f"Project folder: {proj_dir}")
+    path_file = os.path.join(proj_dir+os.sep+'data_location.yml')
+    print(f"tpx3::utils::check_user_folders: Searching for file {path_file}")
+
+    user_path = None
+    data_yaml = None
+    with open(path_file,'r') as yfile:
+        data_yaml = yaml.safe_load(yfile) 
+
+    user_path = data_yaml['directory_root']
+    print(f"Found path in yml file: {user_path}")
+
+    if not os.path.exists(user_path):
+        print(f"ALARM: {user_path} is not a valid path!")
+        user_path = os.path.expanduser('~')
+
+    if user_path=="def":
+        print(f"Found option to use default home path. Setting user_path to \'~\'!")
+        user_path = os.path.expanduser('~')
+    
+    return user_path
+
 
 def check_user_folders():
     """
@@ -312,7 +338,8 @@ def check_user_folders():
     If not missing folders are created.
     """
     # Setup folder structure in user home folder
-    user_path = os.path.expanduser('~')
+    #user_path = os.path.expanduser('~')
+    user_path = get_root_data_path()
     user_path = os.path.join(user_path, 'Timepix3')
     if not os.path.exists(user_path):
         os.makedirs(user_path)
@@ -356,7 +383,9 @@ def check_user_folders():
         os.makedirs(data_log_path)
 
 def get_equal_path():
-    user_path = os.path.expanduser('~')
+
+    user_path = get_root_data_path()
+    #user_path = os.path.expanduser('~')
     user_path = os.path.join(user_path, 'Timepix3')
     equal_path = os.path.join(user_path, 'equalisations')
     return equal_path

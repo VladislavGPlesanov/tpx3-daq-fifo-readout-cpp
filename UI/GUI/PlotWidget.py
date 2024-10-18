@@ -308,7 +308,7 @@ class plotwidget(object):
         return True
 
 class TOTplot(object):
-    def __init__(self, data_queue, upd_data):
+    def __init__(self, data_queue, upd_data, upd_rate, readout_interval):
         
         # adding another subplot
         self.figtot = Figure(figsize=(5,5),dpi=100)
@@ -327,8 +327,12 @@ class TOTplot(object):
         self.logScale = False
         ###################################
 
-        self.update_callback = upd_data
+        #self.update_callback = upd_data
+        self.update_tot_callback = upd_data
 
+        self.update_rate_callback = upd_rate
+        self.rate_list = []
+        self.t_interval = readout_interval
         #print("len(bin_edges):{} -> first10:{}, bin_cnt[0:9]:{}".format(len(self.bin_edges),self.bin_edges[0:9],self.bin_cnt[0:9]))
 
         # some test plot here
@@ -358,6 +362,11 @@ class TOTplot(object):
     def upd_histo(self):
         
         new_tot = self.get_tot_val()
+        print(f"new_tot = {new_tot.shape[0]}")
+        #n_tot_hits = len(new_tot)
+        avg_hit_rate = self.get_rate(new_tot.shape[0])
+
+        self.update_rate_callback(avg_hit_rate)        
 
         i_bin_cnt, _ = np.histogram(new_tot, bins=self.bin_edges)
         self.bin_cnt += i_bin_cnt
@@ -383,7 +392,7 @@ class TOTplot(object):
         dist_mean = 0.0
         if(np.sum(self.bin_cnt)>0):
            dist_mean = np.average(np.linspace(0,1025,self.nbins), weights=self.bin_cnt)
-           self.update_callback(dist_mean)
+           self.update_tot_callback(dist_mean)
 
            # works...
            #popt, pcov = curve_fit(self.exponent, np.linspace(0,1025,self.nbins), self.bin_cnt)  
@@ -398,7 +407,8 @@ class TOTplot(object):
     def reset_histo(self):
         
         self.bin_cnt = np.zeros(self.nbins, dtype=np.int64)
-        self.update_callback(0.0)
+        self.update_tot_callback(0.0)
+        self.update_rate_callback(0.0)
 
     def setLogScale(self):
     
@@ -406,6 +416,24 @@ class TOTplot(object):
 
     def exponent(self, x, a, b, c):
         return (a * np.exp(-b * x) + c)
+
+    def get_rate(self,nhits):
+
+        maxlen = 10
+        rate = 0.0
+
+        if(len(self.rate_list)<maxlen):
+            self.rate_list.append(nhits/self.t_interval)
+            rate = sum(self.rate_list)/len(self.rate_list)
+                
+        else:
+            self.rate_list.pop(0)
+            self.rate_list.append(nhits/self.t_interval)
+            rate = sum(self.rate_list)/len(self.rate_list)
+        
+        #print(f"rate_list={self.rate_list} -> averaged={rate}")
+
+        return rate
 
 class TOAplot(object):
     def __init__(self, data_queue):
