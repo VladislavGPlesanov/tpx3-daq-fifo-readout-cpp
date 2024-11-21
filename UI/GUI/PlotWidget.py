@@ -398,7 +398,7 @@ class TOTplot(object):
            #popt, pcov = curve_fit(self.exponent, np.linspace(0,1025,self.nbins), self.bin_cnt)  
            popt, _ = curve_fit(self.exponent, np.linspace(0,1025,self.nbins), self.bin_cnt)  
            #print(f"Fit for TOT: results:{popt}")
-           self.ax_tot.plot(np.linspace(0.1025,self.nbins), self.exponent(np.linspace(0.1025,self.nbins), *popt), 'r-')
+           self.ax_tot.plot(np.linspace(0,1025,self.nbins), self.exponent(np.linspace(0,1025,self.nbins), *popt), 'r-')
 
         self.canvas_tot.draw()
 

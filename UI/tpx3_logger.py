@@ -15,7 +15,8 @@ class mask_logger(object):
     #self.user_home = '~'
 
     def create_file(filename = None):
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'masks')
         Chipnames = TPX3_datalogger.get_chipnames()
@@ -44,7 +45,8 @@ class mask_logger(object):
                 path = mask_logger.create_file()
                 TPX3_datalogger.write_value(name = 'Mask_path', value = path)
         else:
-            user_path = os.path.expanduser('~')
+            user_path = get_root_data_path()
+            #user_path = os.path.expanduser('~')
             user_path = os.path.join(user_path, 'Timepix3')
             user_path = os.path.join(user_path, 'masks')
             path = user_path + os.sep + mask + '.h5'
@@ -82,7 +84,8 @@ class mask_logger(object):
             if path == None:
                 print('tpx3_logger::delete_mask: Error: data logger has no path to mask file!')
         else:
-            user_path = os.path.expanduser('~')
+            user_path = get_root_data_path()
+            #user_path = os.path.expanduser('~')
             user_path = os.path.join(user_path, 'Timepix3')
             user_path = os.path.join(user_path, 'masks')
             path = user_path + os.sep + mask + '.h5'
@@ -121,7 +124,8 @@ class mask_logger(object):
                 path = mask_logger.create_file()
                 TPX3_datalogger.write_value(name = 'Mask_path', value = path)
         else:
-            user_path = os.path.expanduser('~')
+            user_path = get_root_data_path()
+            #user_path = os.path.expanduser('~')
             user_path = os.path.join(user_path, 'Timepix3')
             user_path = os.path.join(user_path, 'masks')
             path = user_path + os.sep + mask + '.h5'
@@ -146,7 +150,8 @@ class mask_logger(object):
                 print('No mask set')
                 return False
         else:
-            user_path = os.path.expanduser('~')
+            user_path = get_root_data_path()
+            #user_path = os.path.expanduser('~')
             user_path = os.path.join(user_path, 'Timepix3')
             user_path = os.path.join(user_path, 'masks')
             path = user_path + os.sep + mask + '.h5'
@@ -185,7 +190,8 @@ class file_logger(object):
         '''
             Creates backup folder and file if not existing
         '''
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
         Chipnames = TPX3_datalogger.get_chipnames()
@@ -222,7 +228,8 @@ class file_logger(object):
         '''
             Writes temporary backup
         '''
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'tmp')
         filename = 'backup_' + time.strftime('%Y-%m-%d_%H-%M-%S') + '.TPX3'
@@ -240,7 +247,8 @@ class file_logger(object):
         '''
             Deletes old temporary backups which are older then 'days_to_hold' days.
         '''
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'tmp')
 
@@ -261,7 +269,8 @@ class file_logger(object):
         '''
             reads backup and returns the data
         '''
-        user_path = os.path.expanduser('~')
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
         if file == None:
@@ -329,7 +338,9 @@ class file_logger(object):
         '''
             This function creates a default backup file
         '''
-        user_path = os.path.expanduser('~')
+        
+        user_path = get_root_data_path()
+        #user_path = os.path.expanduser('~')
         user_path = os.path.join(user_path, 'Timepix3')
         user_path = os.path.join(user_path, 'backups')
         filename = 'default.TPX3'
